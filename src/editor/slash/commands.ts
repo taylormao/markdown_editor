@@ -100,7 +100,7 @@ export const slashCommands: SlashCommand[] = [
       const def = `[^${n}]: 脚注内容`
       view.dispatch({ changes: { from, to, insert: mark }, userEvent: 'input.slash' })
       const end = view.state.doc.length
-      const gap = view.state.doc.sliceString(Math.max(0, end - 1), end) === '\n' ? '\n' : '\n\n'
+      const gap = view.state.doc.sliceString(Math.max(0, end - 1), end) === '\n' ? '' : '\n'
       const insert = `${gap}${def}`
       const start = end + gap.length + def.length - 4
       view.dispatch({
