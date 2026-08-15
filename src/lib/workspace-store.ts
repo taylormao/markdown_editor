@@ -292,7 +292,6 @@ export const workspace = {
     if (mode === 'select') {
       patch.sidebarOpen = true
       patch.focusMode = false
-      patch.view = 'write'
     }
     if (mode === 'manage') {
       patch.sidebarOpen = true

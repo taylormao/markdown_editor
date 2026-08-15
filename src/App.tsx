@@ -33,6 +33,7 @@ export default function App() {
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
       if (event.key === 'Escape' && !typing) {
         event.preventDefault()
+        event.stopPropagation()
         workspace.cycleChromeMode()
         return
       }
@@ -117,8 +118,8 @@ export default function App() {
         workspace.setView('map')
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
   }, [])
 
   if (!sheet) {

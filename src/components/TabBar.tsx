@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { workspace, useWorkspace } from '../lib/workspace-store'
 import type { Sheet } from '../types'
 
@@ -9,14 +10,20 @@ type Props = {
 
 export function TabBar({ sheets, openTabIds, activeSheetId }: Props) {
   const { chromeMode, renameTarget } = useWorkspace()
+  const barRef = useRef<HTMLDivElement>(null)
   const tabs = openTabIds
     .map((id) => sheets.find((sheet) => sheet.id === id))
     .filter((sheet): sheet is Sheet => Boolean(sheet))
 
+  useEffect(() => {
+    if (chromeMode !== 'select') return
+    barRef.current?.querySelector<HTMLButtonElement>('.tab-item.is-kbd')?.focus()
+  }, [chromeMode, activeSheetId])
+
   if (tabs.length === 0) return null
 
   return (
-    <div className={`tab-bar ${chromeMode === 'select' ? 'is-select' : ''}`}>
+    <div ref={barRef} className={`tab-bar ${chromeMode === 'select' ? 'is-select' : ''}`} tabIndex={-1}>
       {tabs.map((sheet) => {
         const renaming = renameTarget?.kind === 'sheet' && renameTarget.id === sheet.id && chromeMode === 'select'
         return (

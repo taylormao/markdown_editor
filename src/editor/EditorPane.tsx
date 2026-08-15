@@ -55,19 +55,7 @@ export function EditorPane({ sheetId, content, onChange, caret, active }: Props)
           folioHighlight,
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           placeholder('输入 / 唤起超级斜杠…'),
-          keymap.of([
-            {
-              key: 'Escape',
-              run: () => {
-                workspace.cycleChromeMode()
-                return true
-              },
-            },
-            ...defaultKeymap,
-            ...historyKeymap,
-            ...searchKeymap,
-            indentWithTab,
-          ]),
+          keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
           EditorView.lineWrapping,
           superSyntax,
           mathSyntax,
