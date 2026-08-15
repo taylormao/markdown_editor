@@ -8,7 +8,12 @@ export function loadWorkspace(): WorkspaceSnapshot {
     const raw = localStorage.getItem(KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as WorkspaceSnapshot
-      if (parsed.folders?.length && parsed.sheets?.length) return parsed
+      if (parsed.folders?.length && parsed.sheets?.length) {
+        return {
+          ...parsed,
+          openTabIds: parsed.openTabIds?.length ? parsed.openTabIds : [parsed.activeSheetId],
+        }
+      }
     }
   } catch {
     /* ignore corrupt cache */
@@ -20,6 +25,7 @@ export function loadWorkspace(): WorkspaceSnapshot {
     sheets: seed.sheets,
     activeFolderId: seed.folders[1]?.id ?? seed.folders[0].id,
     activeSheetId: seed.sheets[0].id,
+    openTabIds: [seed.sheets[0].id],
     theme: 'system',
   }
 }

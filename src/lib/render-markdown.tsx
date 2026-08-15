@@ -32,7 +32,7 @@ function applyStyle(flags: SuperFlags): CSSProperties {
   return style
 }
 
-function renderInline(text: string, keyPrefix = 'i'): ReactNode[] {
+function renderInline(text: string, keyPrefix = 'i', onWiki?: (title: string) => void): ReactNode[] {
   const nodes: ReactNode[] = []
   const tokens = tokenizeInline(text)
   tokens.forEach((token, index) => {
@@ -50,15 +50,21 @@ function renderInline(text: string, keyPrefix = 'i'): ReactNode[] {
     else if (token.kind === 'link') {
       nodes.push(
         <a key={key} href={token.href} target="_blank" rel="noreferrer">
-          {renderInline(token.value, `${key}-`)}
+          {renderInline(token.value, `${key}-`, onWiki)}
         </a>,
       )
     } else if (token.kind === 'image') {
       nodes.push(<img key={key} src={token.href} alt={token.value} />)
-    } else if (token.kind === 'strong') nodes.push(<strong key={key}>{renderInline(token.value, `${key}-`)}</strong>)
-    else if (token.kind === 'em') nodes.push(<em key={key}>{renderInline(token.value, `${key}-`)}</em>)
-    else if (token.kind === 'strike') nodes.push(<del key={key}>{renderInline(token.value, `${key}-`)}</del>)
-    else if (token.kind === 'math') {
+    }     else if (token.kind === 'strong') nodes.push(<strong key={key}>{renderInline(token.value, `${key}-`, onWiki)}</strong>)
+    else if (token.kind === 'em') nodes.push(<em key={key}>{renderInline(token.value, `${key}-`, onWiki)}</em>)
+    else if (token.kind === 'strike') nodes.push(<del key={key}>{renderInline(token.value, `${key}-`, onWiki)}</del>)
+    else if (token.kind === 'wiki') {
+      nodes.push(
+        <button key={key} type="button" className="wiki-chip" onClick={() => onWiki?.(token.value)}>
+          {token.value}
+        </button>,
+      )
+    } else if (token.kind === 'math') {
       nodes.push(<span key={key} className="math-inline" dangerouslySetInnerHTML={{ __html: renderMath(token.value) }} />)
     } else if (token.kind === 'fn') {
       nodes.push(
@@ -80,6 +86,7 @@ type InlineToken =
   | { kind: 'strong' | 'em' | 'strike'; value: string }
   | { kind: 'fn'; value: string }
   | { kind: 'math'; value: string }
+  | { kind: 'wiki'; value: string }
 
 function tokenizeInline(input: string): InlineToken[] {
   const out: InlineToken[] = []
@@ -107,6 +114,7 @@ function tokenizeInline(input: string): InlineToken[] {
       rest = rest.slice(superMatch[0].length)
       continue
     }
+    if (take(/^\[\[([^[\]]+)\]\]/, (m) => ({ kind: 'wiki', value: m[1] }))) continue
     if (take(/^!\[([^\]]*)\]\(([^)\s]+)\)/, (m) => ({ kind: 'image', value: m[1], href: m[2] }))) continue
     if (take(/^\[([^\]]+)\]\(([^)\s]+)\)/, (m) => ({ kind: 'link', value: m[1], href: m[2] }))) continue
     if (take(/^\[\^([^\]]+)\]/, (m) => ({ kind: 'fn', value: m[1] }))) continue
@@ -116,7 +124,7 @@ function tokenizeInline(input: string): InlineToken[] {
     if (take(/^\*([^*]+)\*/, (m) => ({ kind: 'em', value: m[1] }))) continue
     if (take(/^_([^_]+)_/, (m) => ({ kind: 'em', value: m[1] }))) continue
 
-    const next = rest.search(/`|\$|==|!\[|\[|\*\*|__|~~|\*|_/)
+    const next = rest.search(/`|\$|==|!\[|\[\[|\[|\*\*|__|~~|\*|_/)
     if (next < 0) {
       out.push({ kind: 'text', value: rest })
       break
@@ -292,8 +300,9 @@ const CALLOUT_LABEL: Record<string, string> = {
   DANGER: '危险',
 }
 
-export function MarkdownPreview({ content }: { content: string }) {
+export function MarkdownPreview({ content, onWikiClick }: { content: string; onWikiClick?: (title: string) => void }) {
   const blocks = parseBlocks(content)
+  const inline = (text: string, key: string) => renderInline(text, key, onWikiClick)
 
   if (!content.trim()) {
     return <div className="empty-stage">这篇还是空白，切回写作写上几句。</div>
@@ -306,11 +315,11 @@ export function MarkdownPreview({ content }: { content: string }) {
         if (block.type === 'heading') {
           return (
             <Heading key={key} level={block.level}>
-              {renderInline(block.text, key)}
+              {inline(block.text, key)}
             </Heading>
           )
         }
-        if (block.type === 'paragraph') return <p key={key}>{renderInline(block.text, key)}</p>
+        if (block.type === 'paragraph') return <p key={key}>{inline(block.text, key)}</p>
         if (block.type === 'math') {
           return <div key={key} className="math-block" dangerouslySetInnerHTML={{ __html: renderMath(block.text, true) }} />
         }
@@ -328,7 +337,7 @@ export function MarkdownPreview({ content }: { content: string }) {
               {block.items.map((item, itemIndex) => (
                 <li key={`${key}-${itemIndex}`} className={item.task ? 'task' : undefined}>
                   {item.task ? <input type="checkbox" checked={item.checked} readOnly /> : null}
-                  {renderInline(item.text, `${key}-${itemIndex}`)}
+                  {inline(item.text, `${key}-${itemIndex}`)}
                 </li>
               ))}
             </List>
@@ -341,7 +350,7 @@ export function MarkdownPreview({ content }: { content: string }) {
                 <thead>
                   <tr>
                     {block.headers.map((cell, cellIndex) => (
-                      <th key={cellIndex}>{renderInline(cell, `${key}-h${cellIndex}`)}</th>
+                      <th key={cellIndex}>{inline(cell, `${key}-h${cellIndex}`)}</th>
                     ))}
                   </tr>
                 </thead>
@@ -349,7 +358,7 @@ export function MarkdownPreview({ content }: { content: string }) {
                   {block.rows.map((row, rowIndex) => (
                     <tr key={rowIndex}>
                       {row.map((cell, cellIndex) => (
-                        <td key={cellIndex}>{renderInline(cell, `${key}-r${rowIndex}-${cellIndex}`)}</td>
+                        <td key={cellIndex}>{inline(cell, `${key}-r${rowIndex}-${cellIndex}`)}</td>
                       ))}
                     </tr>
                   ))}
@@ -366,14 +375,14 @@ export function MarkdownPreview({ content }: { content: string }) {
               {block.lines
                 .filter((line) => line.trim().length > 0)
                 .map((line, lineIndex) => (
-                  <p key={lineIndex}>{renderInline(line, `${key}-${lineIndex}`)}</p>
+                  <p key={lineIndex}>{inline(line, `${key}-${lineIndex}`)}</p>
                 ))}
             </blockquote>
           )
         }
         return (
           <p key={key} id={`fn-${block.id}`} className="fn-def">
-            <sup>{block.id}</sup> {renderInline(block.text, key)}
+            <sup>{block.id}</sup> {inline(block.text, key)}
           </p>
         )
       })}

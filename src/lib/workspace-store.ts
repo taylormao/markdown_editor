@@ -22,6 +22,7 @@ const initial = loadWorkspace()
 
 let state: WorkspaceState = {
   ...initial,
+  openTabIds: initial.openTabIds?.length ? initial.openTabIds : [initial.activeSheetId].filter(Boolean),
   view: 'write',
   sidebarOpen: true,
   focusMode: false,
@@ -43,6 +44,7 @@ function persistSoon() {
       sheets: state.sheets,
       activeFolderId: state.activeFolderId,
       activeSheetId: state.activeSheetId,
+      openTabIds: state.openTabIds,
       theme: state.theme,
     }
     saveWorkspace(snapshot)
@@ -77,6 +79,7 @@ export const workspace = {
     setState({
       activeFolderId: id,
       activeSheetId: first?.id ?? state.activeSheetId,
+      openTabIds: first ? Array.from(new Set([...state.openTabIds, first.id])) : state.openTabIds,
       sidebarOpen: true,
       focusMode: false,
     })
@@ -87,7 +90,30 @@ export const workspace = {
     setState({
       activeSheetId: id,
       activeFolderId: sheet.folderId,
+      openTabIds: state.openTabIds.includes(id) ? state.openTabIds : [...state.openTabIds, id],
       focusMode: false,
+    })
+  },
+  openSheetByTitle(title: string) {
+    const needle = title.trim().toLowerCase()
+    const sheet = state.sheets.find((item) => item.title.trim().toLowerCase() === needle)
+    if (!sheet) return
+    setState({
+      activeSheetId: sheet.id,
+      activeFolderId: sheet.folderId,
+      openTabIds: state.openTabIds.includes(sheet.id) ? state.openTabIds : [...state.openTabIds, sheet.id],
+      view: 'write',
+      focusMode: false,
+    })
+  },
+  closeTab(id: string) {
+    const remaining = state.openTabIds.filter((tab) => tab !== id)
+    const nextId = state.activeSheetId === id ? remaining[remaining.length - 1] : state.activeSheetId
+    const next = state.sheets.find((sheet) => sheet.id === nextId)
+    setState({
+      openTabIds: remaining,
+      activeSheetId: next?.id ?? state.activeSheetId,
+      activeFolderId: next?.folderId ?? state.activeFolderId,
     })
   },
   createFolder() {
@@ -118,6 +144,7 @@ export const workspace = {
         sheets: [sheet, ...state.sheets],
         activeFolderId: folderId,
         activeSheetId: sheet.id,
+        openTabIds: [sheet.id, ...state.openTabIds.filter((tab) => tab !== sheet.id)],
         view: 'write',
         focusMode: false,
       },
@@ -159,6 +186,7 @@ export const workspace = {
       {
         sheets: remaining,
         activeSheetId: next?.id ?? '',
+        openTabIds: state.openTabIds.filter((tab) => tab !== id),
       },
       true,
     )

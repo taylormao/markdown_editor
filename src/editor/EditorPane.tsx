@@ -10,9 +10,12 @@ import { folioEditorTheme, folioHighlight } from './theme'
 import { superSyntax } from './super-syntax'
 import { mathSyntax } from './math-syntax'
 import { mermaidSyntax } from './mermaid-syntax'
+import { wikiSyntax } from './wiki-syntax'
 import { calloutDecor } from './callouts'
 import { detectSlash, type SlashSession } from './slash/commands'
 import { SlashMenu } from './slash/SlashMenu'
+import { detectWiki, type WikiSession } from './wiki'
+import { WikiMenu } from './WikiMenu'
 
 type Props = {
   sheetId: string
@@ -26,6 +29,7 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
   const onChangeRef = useRef(onChange)
   const boot = useRef({ id: sheetId, content })
   const [session, setSession] = useState<SlashSession | null>(null)
+  const [wiki, setWiki] = useState<WikiSession | null>(null)
   if (boot.current.id !== sheetId) boot.current = { id: sheetId, content }
   onChangeRef.current = onChange
 
@@ -48,23 +52,26 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
           superSyntax,
           mathSyntax,
           mermaidSyntax,
+          wikiSyntax,
           calloutDecor,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) onChangeRef.current(update.state.doc.toString())
             if (update.docChanged || update.selectionSet) {
-              const next = detectSlash(update.view)
+              const nextSlash = detectSlash(update.view)
+              const nextWiki = detectWiki(update.view)
               queueMicrotask(() => {
+                setWiki(nextWiki)
                 setSession((prev) => {
-                  if (!next) return null
-                  const same = prev?.from === next.from
-                  const codePath = next.path[0] && /^(code|代码|fence)$/i.test(next.path[0])
+                  if (nextWiki || !nextSlash) return null
+                  const same = prev?.from === nextSlash.from
+                  const codePath = nextSlash.path[0] && /^(code|代码|fence)$/i.test(nextSlash.path[0])
                   const mode =
                     same && prev?.mode === 'table'
                       ? 'table'
                       : codePath || (same && prev?.mode === 'code')
                         ? 'code'
                         : 'list'
-                  return { ...next, mode }
+                  return { ...nextSlash, mode }
                 })
               })
             }
@@ -94,7 +101,10 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
   return (
     <div className="editor-host">
       <div className="editor-mount" ref={host} />
-      {session && viewRef.current ? (
+      {wiki && viewRef.current ? (
+        <WikiMenu view={viewRef.current} session={wiki} currentId={sheetId} onClose={() => setWiki(null)} />
+      ) : null}
+      {!wiki && session && viewRef.current ? (
         <SlashMenu
           view={viewRef.current}
           session={session}

@@ -29,5 +29,6 @@ export type WorkspaceSnapshot = {
   sheets: Sheet[]
   activeFolderId: string
   activeSheetId: string
+  openTabIds: string[]
   theme: 'system' | 'light' | 'dark'
 }

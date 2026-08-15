@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { useWorkspace, workspace } from './lib/workspace-store'
 import { Sidebar } from './components/Sidebar'
+import { TabBar } from './components/TabBar'
 import { Toolbar } from './components/Toolbar'
 
 const EditorPane = lazy(() => import('./editor/EditorPane').then((m) => ({ default: m.EditorPane })))
@@ -87,15 +88,18 @@ export default function App() {
 
       <main className="stage">
         {!state.focusMode ? (
-          <Toolbar
-            view={state.view}
-            title={sheet.title}
-            content={sheet.content}
-            saveState={state.saveState}
-            focusMode={state.focusMode}
-            sidebarOpen={state.sidebarOpen}
-            theme={state.theme}
-          />
+          <>
+            <Toolbar
+              view={state.view}
+              title={sheet.title}
+              content={sheet.content}
+              saveState={state.saveState}
+              focusMode={state.focusMode}
+              sidebarOpen={state.sidebarOpen}
+              theme={state.theme}
+            />
+            <TabBar sheets={state.sheets} openTabIds={state.openTabIds} activeSheetId={sheet.id} />
+          </>
         ) : (
           <button className="focus-exit" onClick={() => workspace.toggleFocus()}>
             退出焦点
@@ -111,7 +115,9 @@ export default function App() {
                 onChange={(value) => workspace.updateSheetContent(sheet.id, value)}
               />
             ) : null}
-            {state.view === 'preview' ? <MarkdownPreview content={sheet.content} /> : null}
+            {state.view === 'preview' ? (
+              <MarkdownPreview content={sheet.content} onWikiClick={(title) => workspace.openSheetByTitle(title)} />
+            ) : null}
             {state.view === 'outline' ? <OutlineView content={sheet.content} /> : null}
             {state.view === 'map' ? <MindMapView content={sheet.content} /> : null}
           </Suspense>
