@@ -324,6 +324,61 @@ button {
   color: var(--ink-faint);
 }
 
+.ctx-menu {
+  position: fixed;
+  z-index: 40;
+  min-width: 168px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--paper-solid);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line-strong);
+}
+
+.ctx-menu button {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.ctx-menu button:hover,
+.ctx-flyout button:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.ctx-menu .is-danger {
+  color: #b0544a;
+}
+
+.ctx-sub {
+  position: relative;
+}
+
+.ctx-flyout {
+  display: none;
+  position: absolute;
+  left: calc(100% - 6px);
+  top: 0;
+  min-width: 150px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--paper-solid);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line-strong);
+}
+
+.ctx-sub:hover .ctx-flyout,
+.ctx-sub:focus-within .ctx-flyout {
+  display: block;
+}
+
+.ctx-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
 .wiki-chip {
   display: inline;
   padding: 0 2px;

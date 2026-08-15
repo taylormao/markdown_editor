@@ -128,6 +128,40 @@ export const workspace = {
       true,
     )
   },
+  deleteFolder(id: string) {
+    if (state.folders.length <= 1) return
+    const leftover = state.folders.filter((folder) => folder.id !== id)
+    const fallback = leftover[0]
+    const sheets = state.sheets.map((sheet) => (sheet.folderId === id ? { ...sheet, folderId: fallback.id } : sheet))
+    setState(
+      {
+        folders: leftover,
+        sheets,
+        activeFolderId: state.activeFolderId === id ? fallback.id : state.activeFolderId,
+      },
+      true,
+    )
+  },
+  renameSheet(id: string, title: string) {
+    const next = title.trim() || '未命名文稿'
+    setState(
+      {
+        sheets: state.sheets.map((sheet) => {
+          if (sheet.id !== id) return sheet
+          const lines = sheet.content.split('\n')
+          const first = lines.findIndex((line) => line.trim().length > 0)
+          if (first >= 0) {
+            const marks = lines[first].match(/^#+/)
+            lines[first] = marks ? `${marks[0]} ${next}` : `# ${next}`
+          } else {
+            lines.unshift(`# ${next}`)
+          }
+          return { ...sheet, title: next, content: lines.join('\n'), updatedAt: Date.now() }
+        }),
+      },
+      true,
+    )
+  },
   createSheet(folderId = state.activeFolderId) {
     const now = Date.now()
     const sheet: Sheet = {
