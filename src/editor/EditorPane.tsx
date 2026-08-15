@@ -17,6 +17,7 @@ import { SlashMenu } from './slash/SlashMenu'
 import { detectWiki, type WikiSession } from './wiki'
 import { WikiMenu } from './WikiMenu'
 import { workspace } from '../lib/workspace-store'
+import { locateLogical } from '../lib/logical-line'
 
 type Props = {
   sheetId: string
@@ -77,8 +78,8 @@ export function EditorPane({ sheetId, content, onChange, caret, active }: Props)
             if (update.docChanged) onChangeRef.current(update.state.doc.toString())
             if (update.docChanged || update.selectionSet) {
               const pos = update.state.selection.main.head
-              const line = update.state.doc.lineAt(pos)
-              workspace.setCaret(sheetId, pos, line.number, pos - line.from + 1)
+              const logical = locateLogical(update.state.doc.toString(), pos)
+              workspace.setCaret(sheetId, pos, logical.row, logical.col)
               const nextSlash = detectSlash(update.view)
               const nextWiki = detectWiki(update.view)
               queueMicrotask(() => {
