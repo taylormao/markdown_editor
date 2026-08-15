@@ -7,4 +7,4 @@ npm install
 npm run dev
 ```
 
-快捷键：`Ctrl+\` 侧栏，`Ctrl+.` 焦点，`Ctrl+N` 新建，`Ctrl+1/2/3` 切换视图。
+快捷键：`Ctrl+\` 侧栏，`Ctrl+.` 焦点，`Ctrl+N` 新建，`Ctrl+1/2/3/4` 写作 / 预览 / 大纲 / 导图。

@@ -1,4 +1,4 @@
-export type ViewMode = 'write' | 'outline' | 'map'
+export type ViewMode = 'write' | 'preview' | 'outline' | 'map'
 
 export type Folder = {
   id: string

@@ -42,6 +42,7 @@ export function Toolbar({ view, title, content, saveState, focusMode, sidebarOpe
         {(
           [
             ['write', '写作'],
+            ['preview', '预览'],
             ['outline', '大纲'],
             ['map', '导图'],
           ] as const

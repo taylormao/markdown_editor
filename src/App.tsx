@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar'
 import { Toolbar } from './components/Toolbar'
 
 const EditorPane = lazy(() => import('./editor/EditorPane').then((m) => ({ default: m.EditorPane })))
+const MarkdownPreview = lazy(() => import('./lib/render-markdown').then((m) => ({ default: m.MarkdownPreview })))
 const OutlineView = lazy(() => import('./components/OutlineView').then((m) => ({ default: m.OutlineView })))
 const MindMapView = lazy(() => import('./components/MindMapView').then((m) => ({ default: m.MindMapView })))
 
@@ -47,9 +48,13 @@ export default function App() {
       }
       if (meta && event.key === '2') {
         event.preventDefault()
-        workspace.setView('outline')
+        workspace.setView('preview')
       }
       if (meta && event.key === '3') {
+        event.preventDefault()
+        workspace.setView('outline')
+      }
+      if (meta && event.key === '4') {
         event.preventDefault()
         workspace.setView('map')
       }
@@ -106,6 +111,7 @@ export default function App() {
                 onChange={(value) => workspace.updateSheetContent(sheet.id, value)}
               />
             ) : null}
+            {state.view === 'preview' ? <MarkdownPreview content={sheet.content} /> : null}
             {state.view === 'outline' ? <OutlineView content={sheet.content} /> : null}
             {state.view === 'map' ? <MindMapView content={sheet.content} /> : null}
           </Suspense>

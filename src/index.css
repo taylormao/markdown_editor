@@ -357,8 +357,157 @@ button {
   position: relative;
 }
 
+.preview-stage {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 28px 20vh;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 1.85;
+}
+
+.preview-stage h1,
+.preview-stage h2,
+.preview-stage h3,
+.preview-stage h4,
+.preview-stage h5,
+.preview-stage h6 {
+  margin: 1.4em 0 0.5em;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.preview-stage h1 { font-size: 2.05em; }
+.preview-stage h2 { font-size: 1.45em; }
+.preview-stage h3 { font-size: 1.18em; }
+
+.preview-stage p {
+  margin: 0.7em 0;
+}
+
+.preview-stage a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.preview-stage img {
+  max-width: 100%;
+  border-radius: 12px;
+}
+
+.preview-stage code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  padding: 0.08em 0.32em;
+  border-radius: 5px;
+}
+
+.preview-stage pre {
+  overflow: auto;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-deep) 70%, transparent);
+}
+
+.preview-stage pre code {
+  background: none;
+  padding: 0;
+}
+
+.preview-stage ul,
+.preview-stage ol {
+  padding-left: 1.4em;
+}
+
+.preview-stage li.task {
+  list-style: none;
+  margin-left: -1.2em;
+}
+
+.preview-stage li.task input {
+  margin-right: 8px;
+}
+
+.preview-stage hr {
+  border: 0;
+  height: 1px;
+  background: var(--line);
+  margin: 2em 0;
+}
+
+.preview-table {
+  overflow: auto;
+  margin: 1.2em 0;
+}
+
+.preview-stage table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+
+.preview-stage th,
+.preview-stage td {
+  border: 1px solid var(--line-strong);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.preview-stage th {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.preview-stage blockquote {
+  margin: 1em 0;
+  padding: 0.2em 0 0.2em 1em;
+  color: var(--ink-mute);
+  border-left: 3px solid var(--line-strong);
+}
+
+.preview-stage .callout {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.preview-stage .callout-note,
+.preview-stage .callout-info,
+.preview-stage .callout-tip {
+  box-shadow: inset 3px 0 0 #3d7ea6;
+}
+
+.preview-stage .callout-warning {
+  box-shadow: inset 3px 0 0 #c4922a;
+}
+
+.preview-stage .callout-error,
+.preview-stage .callout-danger {
+  box-shadow: inset 3px 0 0 #b0544a;
+}
+
+.callout-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+  margin-bottom: 4px;
+}
+
+.fn-ref {
+  font-size: 0.72em;
+  vertical-align: super;
+}
+
+.fn-def {
+  font-size: 0.88em;
+  color: var(--ink-mute);
+}
+
 .outline-stage,
 .map-stage,
+.preview-stage,
 .empty-stage {
   height: 100%;
   overflow: auto;
