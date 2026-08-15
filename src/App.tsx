@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { useWorkspace, workspace } from './lib/workspace-store'
+import { handleEscape } from './lib/chrome-keys'
 import { Sidebar } from './components/Sidebar'
 import { TabBar } from './components/TabBar'
 import { Toolbar } from './components/Toolbar'
@@ -31,12 +32,7 @@ export default function App() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
-      if (event.key === 'Escape' && !typing) {
-        event.preventDefault()
-        event.stopPropagation()
-        workspace.cycleChromeMode()
-        return
-      }
+      if (handleEscape(event)) return
       const mode = workspace.get().chromeMode
       if (mode === 'select' && !typing) {
         if (event.key === 'Tab') {

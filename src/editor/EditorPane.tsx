@@ -17,6 +17,7 @@ import { SlashMenu } from './slash/SlashMenu'
 import { detectWiki, type WikiSession } from './wiki'
 import { WikiMenu } from './WikiMenu'
 import { workspace } from '../lib/workspace-store'
+import { handleEscape } from '../lib/chrome-keys'
 import { locateLogical } from '../lib/logical-line'
 
 type Props = {
@@ -55,7 +56,20 @@ export function EditorPane({ sheetId, content, onChange, caret, active }: Props)
           folioHighlight,
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           placeholder('输入 / 唤起超级斜杠…'),
-          keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+          keymap.of([
+            {
+              key: 'Escape',
+              run: () => {
+                handleEscape(new KeyboardEvent('keydown', { key: 'Escape' }))
+                return true
+              },
+              preventDefault: true,
+            },
+            ...defaultKeymap,
+            ...historyKeymap,
+            ...searchKeymap,
+            indentWithTab,
+          ]),
           EditorView.lineWrapping,
           superSyntax,
           mathSyntax,
