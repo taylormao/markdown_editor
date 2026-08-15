@@ -14,10 +14,24 @@ type Props = {
   onRename: () => void
   onDelete: () => void
   onMove?: (folderId: string) => void
+  onNewSheet?: () => void
+  onNewFolder?: () => void
   onClose: () => void
 }
 
-export function ContextMenu({ target, x, y, folders, currentFolderId, onRename, onDelete, onMove, onClose }: Props) {
+export function ContextMenu({
+  target,
+  x,
+  y,
+  folders,
+  currentFolderId,
+  onRename,
+  onDelete,
+  onMove,
+  onNewSheet,
+  onNewFolder,
+  onClose,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -36,9 +50,17 @@ export function ContextMenu({ target, x, y, folders, currentFolderId, onRename, 
   }, [onClose])
 
   const destinations = folders.filter((folder) => folder.id !== currentFolderId)
+  const left = Math.min(x, window.innerWidth - 200)
+  const top = Math.min(y, window.innerHeight - 240)
 
   return (
-    <div className="ctx-menu" ref={ref} style={{ left: x, top: y }} role="menu">
+    <div className="ctx-menu" ref={ref} style={{ left, top }} role="menu">
+      {target.kind === 'folder' ? (
+        <>
+          <button onClick={onNewSheet}>新建文稿</button>
+          <button onClick={onNewFolder}>新建子文件夹</button>
+        </>
+      ) : null}
       <button onClick={onRename}>重命名</button>
       {target.kind === 'sheet' && onMove ? (
         <div className="ctx-sub">

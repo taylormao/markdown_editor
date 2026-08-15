@@ -10,6 +10,7 @@ export type Folder = {
   id: string
   name: string
   order: number
+  parentId: string | null
 }
 
 export type Sheet = {

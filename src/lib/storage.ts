@@ -11,6 +11,7 @@ export function loadWorkspace(): WorkspaceSnapshot {
       if (parsed.folders?.length && parsed.sheets?.length) {
         return {
           ...parsed,
+          folders: parsed.folders.map((folder) => ({ ...folder, parentId: folder.parentId ?? null })),
           openTabIds: parsed.openTabIds?.length ? parsed.openTabIds : [parsed.activeSheetId],
         }
       }

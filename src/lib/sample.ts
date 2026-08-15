@@ -44,8 +44,8 @@ export function createSeed(): { folders: Folder[]; sheets: Sheet[] } {
   const now = Date.now()
 
   const folders: Folder[] = [
-    { id: inbox, name: '收集箱', order: 0 },
-    { id: drafts, name: '文稿', order: 1 },
+    { id: inbox, name: '收集箱', order: 0, parentId: null },
+    { id: drafts, name: '文稿', order: 1, parentId: null },
   ]
 
   const sheets: Sheet[] = [

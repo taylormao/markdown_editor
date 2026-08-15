@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Folder, Sheet } from '../types'
 import { useWorkspace, workspace } from '../lib/workspace-store'
 import type { OutlineNode } from '../types'
 import { excerptFromContent, parseOutline } from '../lib/document-tree'
+import { flattenFolders, folderDepth } from '../lib/folders'
 
 function flatten(nodes: OutlineNode[]): OutlineNode[] {
   return nodes.flatMap((node) => [node, ...flatten(node.children)])
@@ -53,6 +54,30 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
     setMenu(null)
   }
 
+  useEffect(() => {
+    const onMenu = (event: KeyboardEvent) => {
+      if (event.key !== 'ContextMenu' && event.code !== 'ContextMenu') return
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return
+      event.preventDefault()
+      const manage = workspace.currentManageItem()
+      const target: ContextTarget =
+        manage?.kind === 'folder' || manage?.kind === 'sheet'
+          ? { kind: manage.kind, id: manage.id }
+          : { kind: 'folder', id: activeFolderId }
+      const node = document.querySelector<HTMLElement>(
+        target.kind === 'folder' ? `[data-folder-id="${target.id}"]` : `[data-sheet-id="${target.id}"]`,
+      )
+      const box = node?.getBoundingClientRect()
+      setMenu({
+        target,
+        x: box ? box.left + 24 : 120,
+        y: box ? box.bottom - 4 : 180,
+      })
+    }
+    window.addEventListener('keydown', onMenu, true)
+    return () => window.removeEventListener('keydown', onMenu, true)
+  }, [activeFolderId])
+
   return (
     <aside className={`glass-rail ${chromeMode === 'manage' ? 'is-manage' : ''}`} onContextMenu={(event) => event.preventDefault()}>
       <div className="rail-head">
@@ -75,9 +100,9 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
       </label>
 
       <div className="folder-list">
-        {folders.map((folder) => {
+        {flattenFolders(folders).map((folder) => {
           const count = sheets.filter((sheet) => sheet.folderId === folder.id).length
-          const Icon = folder.order === 0 ? IconInbox : IconFolder
+          const Icon = folder.parentId == null && folder.order === 0 ? IconInbox : IconFolder
           const editing =
             (renaming?.kind === 'folder' && renaming.id === folder.id) ||
             (renameTarget?.kind === 'folder' && renameTarget.id === folder.id)
@@ -85,6 +110,8 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
           return (
             <button
               key={folder.id}
+              data-folder-id={folder.id}
+              style={{ paddingLeft: `${10 + folderDepth(folders, folder.id) * 14}px` }}
               className={`folder-item ${folder.id === activeFolderId ? 'is-active' : ''} ${kbd ? 'is-kbd' : ''} ${collapsedFolderIds.includes(folder.id) ? 'is-collapsed' : ''}`}
               onClick={() => workspace.selectFolder(folder.id)}
               onDoubleClick={() => startRename({ kind: 'folder', id: folder.id })}
@@ -139,6 +166,7 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
             return (
               <div key={sheet.id}>
                 <article
+                  data-sheet-id={sheet.id}
                   className={`sheet-card ${sheet.id === activeSheetId ? 'is-active' : ''} ${kbd ? 'is-kbd' : ''}`}
                   onClick={() => workspace.selectSheet(sheet.id)}
                   onDoubleClick={() => startRename({ kind: 'sheet', id: sheet.id })}
@@ -237,6 +265,22 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
               ? (folderId) => {
                   workspace.moveSheet(menu.target.id, folderId)
                   setMenu(null)
+                }
+              : undefined
+          }
+          onNewSheet={
+            menu.target.kind === 'folder'
+              ? () => {
+                  workspace.createSheet(menu.target.id)
+                  setMenu(null)
+                }
+              : undefined
+          }
+          onNewFolder={
+            menu.target.kind === 'folder'
+              ? () => {
+                  const id = workspace.createFolder(menu.target.id)
+                  startRename({ kind: 'folder', id })
                 }
               : undefined
           }

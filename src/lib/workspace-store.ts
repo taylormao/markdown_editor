@@ -154,9 +154,10 @@ export const workspace = {
       activeFolderId: next?.folderId ?? state.activeFolderId,
     })
   },
-  createFolder() {
-    const folder: Folder = { id: uid(), name: '新文件夹', order: state.folders.length }
+  createFolder(parentId: string | null = null) {
+    const folder: Folder = { id: uid(), name: '新文件夹', order: state.folders.length, parentId }
     setState({ folders: [...state.folders, folder], activeFolderId: folder.id }, true)
+    return folder.id
   },
   renameFolder(id: string, name: string) {
     setState(
@@ -168,14 +169,21 @@ export const workspace = {
   },
   deleteFolder(id: string) {
     if (state.folders.length <= 1) return
-    const leftover = state.folders.filter((folder) => folder.id !== id)
+    const doomed = new Set<string>()
+    const walk = (fid: string) => {
+      doomed.add(fid)
+      state.folders.filter((folder) => folder.parentId === fid).forEach((child) => walk(child.id))
+    }
+    walk(id)
+    const leftover = state.folders.filter((folder) => !doomed.has(folder.id))
+    if (!leftover.length) return
     const fallback = leftover[0]
-    const sheets = state.sheets.map((sheet) => (sheet.folderId === id ? { ...sheet, folderId: fallback.id } : sheet))
+    const sheets = state.sheets.map((sheet) => (doomed.has(sheet.folderId) ? { ...sheet, folderId: fallback.id } : sheet))
     setState(
       {
         folders: leftover,
         sheets,
-        activeFolderId: state.activeFolderId === id ? fallback.id : state.activeFolderId,
+        activeFolderId: doomed.has(state.activeFolderId) ? fallback.id : state.activeFolderId,
       },
       true,
     )

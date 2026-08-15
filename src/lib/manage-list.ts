@@ -1,5 +1,6 @@
 import type { Folder, ManageItem, OutlineNode, Sheet } from '../types'
 import { parseOutline } from './document-tree'
+import { flattenFolders } from './folders'
 
 function flattenOutline(nodes: OutlineNode[]): OutlineNode[] {
   return nodes.flatMap((node) => [node, ...flattenOutline(node.children)])
@@ -12,7 +13,7 @@ export function buildManageList(
   collapsedFolderIds: string[],
   expandedSheetIds: string[],
 ): ManageItem[] {
-  const items: ManageItem[] = folders.map((folder) => ({ kind: 'folder', id: folder.id }))
+  const items: ManageItem[] = flattenFolders(folders).map((folder) => ({ kind: 'folder', id: folder.id }))
   if (collapsedFolderIds.includes(activeFolderId)) return items
 
   const visible = sheets
