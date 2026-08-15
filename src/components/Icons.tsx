@@ -77,6 +77,15 @@ export function IconExport({ size = 16 }: IconProps) {
   )
 }
 
+export function IconImport({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+      <path d="M12 21V9M7 14l5 5 5-5" />
+      <path d="M5 5h14" />
+    </svg>
+  )
+}
+
 export function IconTrash({ size = 14 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">

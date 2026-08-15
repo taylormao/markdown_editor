@@ -20,6 +20,10 @@ export default function App() {
   const sheet = state.sheets.find((item) => item.id === state.activeSheetId) ?? state.sheets[0]
 
   useEffect(() => {
+    void workspace.hydrate()
+  }, [])
+
+  useEffect(() => {
     const apply = () => {
       document.documentElement.dataset.theme = resolveTheme(state.theme)
     }

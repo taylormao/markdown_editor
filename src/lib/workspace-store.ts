@@ -3,7 +3,8 @@ import type { ChromeMode, Folder, ManageItem, RenameTarget, Sheet, ViewMode, Wor
 import { buildManageList } from './manage-list'
 import { uid } from './id'
 import { titleFromContent } from './document-tree'
-import { loadWorkspace, saveWorkspace } from './storage'
+import { exportBackup as downloadBackup, importBackupFile, loadWorkspace, saveWorkspace } from './storage'
+import { seedSnapshot } from './workspace-io'
 
 type WorkspaceState = WorkspaceSnapshot & {
   view: ViewMode
@@ -28,11 +29,11 @@ let persistTimer = 0
 let savedTimer = 0
 let toastTimer = 0
 
-const initial = loadWorkspace()
+const initial = seedSnapshot()
 
 let state: WorkspaceState = {
   ...initial,
-  openTabIds: initial.openTabIds?.length ? initial.openTabIds : [initial.activeSheetId].filter(Boolean),
+  openTabIds: initial.openTabIds,
   view: 'write',
   sidebarOpen: true,
   focusMode: false,
@@ -65,16 +66,17 @@ function persistSoon() {
       openTabIds: state.openTabIds,
       theme: state.theme,
     }
-    saveWorkspace(snapshot)
-    state = { ...state, saveState: 'saved' }
-    emit()
-    window.clearTimeout(savedTimer)
-    savedTimer = window.setTimeout(() => {
-      if (state.saveState === 'saved') {
-        state = { ...state, saveState: 'idle' }
-        emit()
-      }
-    }, 1600)
+    void saveWorkspace(snapshot).then(() => {
+      state = { ...state, saveState: 'saved' }
+      emit()
+      window.clearTimeout(savedTimer)
+      savedTimer = window.setTimeout(() => {
+        if (state.saveState === 'saved') {
+          state = { ...state, saveState: 'idle' }
+          emit()
+        }
+      }, 1600)
+    })
   }, 420)
 }
 
@@ -441,6 +443,46 @@ export const workspace = {
       focusMode: false,
     })
     toast('进入编辑模式')
+  },
+  async hydrate() {
+    const snapshot = await loadWorkspace()
+    setState({
+      folders: snapshot.folders,
+      sheets: snapshot.sheets,
+      activeFolderId: snapshot.activeFolderId,
+      activeSheetId: snapshot.activeSheetId,
+      openTabIds: snapshot.openTabIds,
+      theme: snapshot.theme,
+      saveState: 'saved',
+    })
+  },
+  exportBackup() {
+    downloadBackup({
+      folders: state.folders,
+      sheets: state.sheets,
+      activeFolderId: state.activeFolderId,
+      activeSheetId: state.activeSheetId,
+      openTabIds: state.openTabIds,
+      theme: state.theme,
+    })
+    toast('已导出备份')
+  },
+  async importBackup(file: File) {
+    const snapshot = await importBackupFile(file)
+    setState(
+      {
+        folders: snapshot.folders,
+        sheets: snapshot.sheets,
+        activeFolderId: snapshot.activeFolderId,
+        activeSheetId: snapshot.activeSheetId,
+        openTabIds: snapshot.openTabIds,
+        theme: snapshot.theme,
+        chromeMode: 'edit',
+        caretBySheet: {},
+      },
+      true,
+    )
+    toast('已导入备份，层级与双链保持不变')
   },
 }
 

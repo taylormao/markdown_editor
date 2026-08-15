@@ -259,6 +259,22 @@ button {
   gap: 2px;
 }
 
+.text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 9px;
+  color: var(--ink-mute);
+  font-size: 12px;
+}
+
+.text-btn:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--ink);
+}
+
 .card-actions button,
 .ghost-btn {
   width: 30px;

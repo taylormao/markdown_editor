@@ -2,7 +2,7 @@ import type { ViewMode } from '../types'
 import { useWorkspace, workspace } from '../lib/workspace-store'
 import { countWords } from '../lib/document-tree'
 import { manageLabel } from '../lib/manage-list'
-import { IconExport, IconFocus, IconSidebar, IconTheme } from './Icons'
+import { IconExport, IconFocus, IconImport, IconSidebar, IconTheme } from './Icons'
 
 type Props = {
   view: ViewMode
@@ -70,9 +70,26 @@ export function Toolbar({ view, title, content, saveState, focusMode, sidebarOpe
         <button className="ghost-btn" title={themeLabel} onClick={() => workspace.cycleTheme()}>
           <IconTheme />
         </button>
-        <button className="ghost-btn" title="导出 Markdown" onClick={() => exportMarkdown(title, content)}>
+        <button className="ghost-btn" title="导出当前文稿 Markdown" onClick={() => exportMarkdown(title, content)}>
           <IconExport />
         </button>
+        <button className="text-btn" title="导出工作区备份" onClick={() => workspace.exportBackup()}>
+          备份
+        </button>
+        <label className="text-btn" title="导入工作区备份">
+          <IconImport />
+          导入
+          <input
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) void workspace.importBackup(file)
+              event.target.value = ''
+            }}
+          />
+        </label>
       </div>
     </header>
   )

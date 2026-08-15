@@ -1,36 +1,62 @@
 import type { WorkspaceSnapshot } from '../types'
-import { createSeed } from './sample'
+import { normalizeSnapshot, parseBackup, seedSnapshot, toWorkspaceFile } from './workspace-io'
 
 const KEY = 'folio.workspace.v1'
 
-export function loadWorkspace(): WorkspaceSnapshot {
+function fromCache(): WorkspaceSnapshot | null {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as WorkspaceSnapshot
-      if (parsed.folders?.length && parsed.sheets?.length) {
-        return {
-          ...parsed,
-          folders: parsed.folders.map((folder) => ({ ...folder, parentId: folder.parentId ?? null })),
-          openTabIds: parsed.openTabIds?.length ? parsed.openTabIds : [parsed.activeSheetId],
-        }
-      }
-    }
+    if (!raw) return null
+    return normalizeSnapshot(JSON.parse(raw))
   } catch {
-    /* ignore corrupt cache */
-  }
-
-  const seed = createSeed()
-  return {
-    folders: seed.folders,
-    sheets: seed.sheets,
-    activeFolderId: seed.folders[1]?.id ?? seed.folders[0].id,
-    activeSheetId: seed.sheets[0].id,
-    openTabIds: [seed.sheets[0].id],
-    theme: 'system',
+    return null
   }
 }
 
-export function saveWorkspace(snapshot: WorkspaceSnapshot): void {
-  localStorage.setItem(KEY, JSON.stringify(snapshot))
+export async function loadWorkspace(): Promise<WorkspaceSnapshot> {
+  try {
+    const res = await fetch('/api/workspace')
+    if (res.ok) {
+      const parsed = normalizeSnapshot(await res.json())
+      if (parsed) {
+        localStorage.setItem(KEY, JSON.stringify(parsed))
+        return parsed
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+  return fromCache() ?? seedSnapshot()
+}
+
+export async function saveWorkspace(snapshot: WorkspaceSnapshot): Promise<void> {
+  const file = toWorkspaceFile(snapshot)
+  localStorage.setItem(KEY, JSON.stringify(file))
+  try {
+    await fetch('/api/workspace', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(file),
+    })
+  } catch {
+    /* keep browser cache if disk API is down */
+  }
+}
+
+export function exportBackup(snapshot: WorkspaceSnapshot): void {
+  const blob = new Blob([JSON.stringify(toWorkspaceFile(snapshot), null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `folio-backup-${new Date().toISOString().slice(0, 10)}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+export function importBackupFile(file: File): Promise<WorkspaceSnapshot> {
+  return file.text().then((raw) => {
+    const parsed = parseBackup(raw)
+    if (!parsed) throw new Error('invalid backup')
+    return parsed
+  })
 }

@@ -1,4 +1,4 @@
-# Folio 1.0.0
+# Folio 1.1.0
 
 沉浸式 Markdown 写作台。界面参考 Effie 的退让式三栏：文稿箱、卡片列表、写作区。同一份文稿可在写作、预览、大纲、导图之间切换。
 
@@ -17,7 +17,7 @@ npm run preview  # 预览构建结果
 npm run lint     # oxlint
 ```
 
-数据保存在本机浏览器 `localStorage`，键名 `folio.workspace.v1`。清站点数据会丢失文稿。导出请用工具栏的 Markdown 导出。
+开发时数据写在项目里的 `data/workspace.json`（文件夹层级、文稿、双链 id 都在这份快照里）。工具栏「备份 / 导入」可导出或恢复完整工作区，关系不变。`localStorage` 仅作离线缓存。
 
 ---
 
@@ -167,15 +167,17 @@ markdown_editor/
 
 ## 数据存放
 
-- **位置**：浏览器 `localStorage['folio.workspace.v1']`
+- **主存储**：项目目录 `data/workspace.json`（开发服务器 `/api/workspace` 读写）
+- **缓存**：浏览器 `localStorage['folio.workspace.v1']`（API 不可用时回退）
+- **备份**：工具栏导出 JSON，导入时保留 folder/sheet id、parentId、双链标题
 - **内容**：`folders`（含 `parentId`）、`sheets`（标题、正文、星标、时间）、`activeFolderId`、`activeSheetId`、`openTabIds`、`theme`
 - **运行时不落盘**：视图、Esc 模式、光标记忆、折叠展开、toast
 - **标题**：取正文第一行非空文本；重命名会改第一行标题
 
-换电脑或清缓存即丢失。正式备份请导出 `.md`。
+换电脑请带走 `data/workspace.json`，或用工具栏「备份」导出 JSON。单篇可用导出 Markdown。
 
 ---
 
 ## 版本
 
-当前 **1.0.0**。此前迭代见 git tag：`v0.2.0` 预览 … `v0.8.0` 嵌套文件夹。
+当前 **1.1.0**。此前迭代见 git tag：`v1.0.0` 正式版，`v0.2.0` 预览 … `v0.8.0` 嵌套文件夹。
