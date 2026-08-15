@@ -30,6 +30,63 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
+      if (event.key === 'Escape' && !typing) {
+        event.preventDefault()
+        workspace.cycleChromeMode()
+        return
+      }
+      const mode = workspace.get().chromeMode
+      if (mode === 'select' && !typing) {
+        if (event.key === 'Tab') {
+          event.preventDefault()
+          workspace.nextTab()
+          return
+        }
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          workspace.setChromeMode('edit', '进入编辑模式')
+          return
+        }
+        if (event.key === 'F2') {
+          event.preventDefault()
+          workspace.requestRename({ kind: 'sheet', id: workspace.get().activeSheetId })
+          return
+        }
+      }
+      if (mode === 'manage' && !typing) {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault()
+          workspace.moveManage(1)
+          return
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault()
+          workspace.moveManage(-1)
+          return
+        }
+        if (event.key === 'ArrowRight') {
+          event.preventDefault()
+          workspace.expandManage()
+          return
+        }
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault()
+          workspace.collapseManage()
+          return
+        }
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          workspace.confirmManage()
+          return
+        }
+        if (event.key === 'F2') {
+          event.preventDefault()
+          const item = workspace.currentManageItem()
+          if (item?.kind === 'folder' || item?.kind === 'sheet') workspace.requestRename({ kind: item.kind, id: item.id })
+          return
+        }
+      }
       const meta = event.metaKey || event.ctrlKey
       if (meta && event.key === '\\') {
         event.preventDefault()
@@ -75,7 +132,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${state.focusMode ? 'is-focus' : ''} ${state.sidebarOpen ? '' : 'is-collapsed'}`}>
+    <div className={`app-shell mode-${state.chromeMode} ${state.focusMode ? 'is-focus' : ''} ${state.sidebarOpen ? '' : 'is-collapsed'}`}>
       {state.sidebarOpen && !state.focusMode ? (
         <Sidebar
           folders={state.folders}
@@ -112,6 +169,8 @@ export default function App() {
               <EditorPane
                 sheetId={sheet.id}
                 content={sheet.content}
+                caret={state.caretBySheet[sheet.id] ?? 0}
+                active={state.chromeMode === 'edit'}
                 onChange={(value) => workspace.updateSheetContent(sheet.id, value)}
               />
             ) : null}
@@ -123,6 +182,7 @@ export default function App() {
           </Suspense>
         </section>
       </main>
+      {state.toast ? <div className="mode-toast">{state.toast}</div> : null}
     </div>
   )
 }

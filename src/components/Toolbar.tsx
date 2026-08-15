@@ -1,6 +1,7 @@
 import type { ViewMode } from '../types'
-import { workspace } from '../lib/workspace-store'
+import { useWorkspace, workspace } from '../lib/workspace-store'
 import { countWords } from '../lib/document-tree'
+import { manageLabel } from '../lib/manage-list'
 import { IconExport, IconFocus, IconSidebar, IconTheme } from './Icons'
 
 type Props = {
@@ -24,9 +25,17 @@ function exportMarkdown(title: string, content: string) {
 }
 
 export function Toolbar({ view, title, content, saveState, focusMode, sidebarOpen, theme }: Props) {
+  const state = useWorkspace()
   const stats = countWords(content)
   const themeLabel = theme === 'system' ? '跟随系统' : theme === 'light' ? '浅色' : '深色'
   const saveLabel = saveState === 'saving' ? '正在保存' : saveState === 'saved' ? '已保存' : ''
+  const manage = workspace.currentManageItem()
+  const status =
+    state.chromeMode === 'edit'
+      ? `编辑模式 : row${state.caret.line} : col${state.caret.col} : ${stats.chars}字 ${stats.words}词`
+      : state.chromeMode === 'select'
+        ? `选择模式 ：${title}`
+        : `管理模式 ：${manage ? manageLabel(manage, state.folders, state.sheets) : title}`
 
   return (
     <header className="chrome">
@@ -54,9 +63,7 @@ export function Toolbar({ view, title, content, saveState, focusMode, sidebarOpe
       </nav>
 
       <div className="chrome-right">
-        <span className="stats">
-          {stats.chars} 字 · {stats.words} 词
-        </span>
+        <span className="stats">{status}</span>
         <button className={`ghost-btn ${focusMode ? 'is-on' : ''}`} title="焦点模式" onClick={() => workspace.toggleFocus()}>
           <IconFocus />
         </button>

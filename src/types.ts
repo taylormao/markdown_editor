@@ -1,4 +1,10 @@
 export type ViewMode = 'write' | 'preview' | 'outline' | 'map'
+export type ChromeMode = 'edit' | 'select' | 'manage'
+export type ManageItem =
+  | { kind: 'folder'; id: string }
+  | { kind: 'sheet'; id: string }
+  | { kind: 'outline'; sheetId: string; line: number; text: string }
+export type RenameTarget = { kind: 'folder' | 'sheet'; id: string }
 
 export type Folder = {
   id: string

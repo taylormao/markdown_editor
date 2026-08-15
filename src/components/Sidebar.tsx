@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import type { Folder, Sheet } from '../types'
-import { workspace } from '../lib/workspace-store'
-import { excerptFromContent } from '../lib/document-tree'
+import { useWorkspace, workspace } from '../lib/workspace-store'
+import type { OutlineNode } from '../types'
+import { excerptFromContent, parseOutline } from '../lib/document-tree'
+
+function flatten(nodes: OutlineNode[]): OutlineNode[] {
+  return nodes.flatMap((node) => [node, ...flatten(node.children)])
+}
 import { IconFolder, IconInbox, IconPlus, IconSearch, IconStar, IconTrash } from './Icons'
 import { ContextMenu, type ContextTarget } from './ContextMenu'
 
@@ -22,9 +27,12 @@ function formatTime(ts: number): string {
 }
 
 export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query }: Props) {
+  const { chromeMode, renameTarget, collapsedFolderIds, expandedSheetIds } = useWorkspace()
   const [renaming, setRenaming] = useState<ContextTarget | null>(null)
   const [menu, setMenu] = useState<{ target: ContextTarget; x: number; y: number } | null>(null)
   const q = query.trim().toLowerCase()
+  const manage = workspace.currentManageItem()
+  const folderCollapsed = collapsedFolderIds.includes(activeFolderId)
 
   const visible = sheets
     .filter((sheet) => sheet.folderId === activeFolderId)
@@ -46,7 +54,7 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
   }
 
   return (
-    <aside className="glass-rail" onContextMenu={(event) => event.preventDefault()}>
+    <aside className={`glass-rail ${chromeMode === 'manage' ? 'is-manage' : ''}`} onContextMenu={(event) => event.preventDefault()}>
       <div className="rail-head">
         <div className="brand">
           <span className="brand-mark" />
@@ -70,11 +78,14 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
         {folders.map((folder) => {
           const count = sheets.filter((sheet) => sheet.folderId === folder.id).length
           const Icon = folder.order === 0 ? IconInbox : IconFolder
-          const editing = renaming?.kind === 'folder' && renaming.id === folder.id
+          const editing =
+            (renaming?.kind === 'folder' && renaming.id === folder.id) ||
+            (renameTarget?.kind === 'folder' && renameTarget.id === folder.id)
+          const kbd = chromeMode === 'manage' && manage?.kind === 'folder' && manage.id === folder.id
           return (
             <button
               key={folder.id}
-              className={`folder-item ${folder.id === activeFolderId ? 'is-active' : ''}`}
+              className={`folder-item ${folder.id === activeFolderId ? 'is-active' : ''} ${kbd ? 'is-kbd' : ''} ${collapsedFolderIds.includes(folder.id) ? 'is-collapsed' : ''}`}
               onClick={() => workspace.selectFolder(folder.id)}
               onDoubleClick={() => startRename({ kind: 'folder', id: folder.id })}
               onContextMenu={(event) => openMenu(event, { kind: 'folder', id: folder.id })}
@@ -88,10 +99,15 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
                   onBlur={(event) => {
                     workspace.renameFolder(folder.id, event.target.value.trim() || folder.name)
                     setRenaming(null)
+                    workspace.clearRename()
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') (event.target as HTMLInputElement).blur()
-                    if (event.key === 'Escape') setRenaming(null)
+                    if (event.key === 'Escape') {
+                      event.stopPropagation()
+                      setRenaming(null)
+                      workspace.clearRename()
+                    }
                   }}
                   onClick={(event) => event.stopPropagation()}
                 />
@@ -109,63 +125,92 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
       </div>
 
       <div className="card-scroll">
-        {visible.length === 0 ? (
+        {folderCollapsed ? (
+          <div className="empty-hint">文件夹已折叠</div>
+        ) : visible.length === 0 ? (
           <div className="empty-hint">这一格还是空的</div>
         ) : (
           visible.map((sheet) => {
-            const editing = renaming?.kind === 'sheet' && renaming.id === sheet.id
+            const editing =
+              (renaming?.kind === 'sheet' && renaming.id === sheet.id) ||
+              (renameTarget?.kind === 'sheet' && renameTarget.id === sheet.id && chromeMode === 'manage')
+            const kbd = chromeMode === 'manage' && manage?.kind === 'sheet' && manage.id === sheet.id
+            const outline = expandedSheetIds.includes(sheet.id) ? parseOutline(sheet.content) : []
             return (
-              <article
-                key={sheet.id}
-                className={`sheet-card ${sheet.id === activeSheetId ? 'is-active' : ''}`}
-                onClick={() => workspace.selectSheet(sheet.id)}
-                onDoubleClick={() => startRename({ kind: 'sheet', id: sheet.id })}
-                onContextMenu={(event) => openMenu(event, { kind: 'sheet', id: sheet.id })}
-              >
-                <header>
-                  {editing ? (
-                    <input
-                      autoFocus
-                      className="inline-input"
-                      defaultValue={sheet.title}
-                      onClick={(event) => event.stopPropagation()}
-                      onBlur={(event) => {
-                        workspace.renameSheet(sheet.id, event.target.value)
-                        setRenaming(null)
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') (event.target as HTMLInputElement).blur()
-                        if (event.key === 'Escape') setRenaming(null)
-                      }}
-                    />
-                  ) : (
-                    <h3>{sheet.title}</h3>
-                  )}
-                  <div className="card-actions">
-                    <button
-                      className={sheet.starred ? 'is-on' : ''}
-                      title="星标"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        workspace.toggleStar(sheet.id)
-                      }}
-                    >
-                      <IconStar filled={sheet.starred} />
-                    </button>
-                    <button
-                      title="删除"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        if (confirm('删除这篇文稿？')) workspace.deleteSheet(sheet.id)
-                      }}
-                    >
-                      <IconTrash />
-                    </button>
-                  </div>
-                </header>
-                <p>{excerptFromContent(sheet.content)}</p>
-                <time>{formatTime(sheet.updatedAt)}</time>
-              </article>
+              <div key={sheet.id}>
+                <article
+                  className={`sheet-card ${sheet.id === activeSheetId ? 'is-active' : ''} ${kbd ? 'is-kbd' : ''}`}
+                  onClick={() => workspace.selectSheet(sheet.id)}
+                  onDoubleClick={() => startRename({ kind: 'sheet', id: sheet.id })}
+                  onContextMenu={(event) => openMenu(event, { kind: 'sheet', id: sheet.id })}
+                >
+                  <header>
+                    {editing ? (
+                      <input
+                        autoFocus
+                        className="inline-input"
+                        defaultValue={sheet.title}
+                        onClick={(event) => event.stopPropagation()}
+                        onBlur={(event) => {
+                          workspace.renameSheet(sheet.id, event.target.value)
+                          setRenaming(null)
+                          workspace.clearRename()
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') (event.target as HTMLInputElement).blur()
+                          if (event.key === 'Escape') {
+                            event.stopPropagation()
+                            setRenaming(null)
+                            workspace.clearRename()
+                          }
+                        }}
+                      />
+                    ) : (
+                      <h3>{sheet.title}</h3>
+                    )}
+                    <div className="card-actions">
+                      <button
+                        className={sheet.starred ? 'is-on' : ''}
+                        title="星标"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          workspace.toggleStar(sheet.id)
+                        }}
+                      >
+                        <IconStar filled={sheet.starred} />
+                      </button>
+                      <button
+                        title="删除"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          if (confirm('删除这篇文稿？')) workspace.deleteSheet(sheet.id)
+                        }}
+                      >
+                        <IconTrash />
+                      </button>
+                    </div>
+                  </header>
+                  <p>{excerptFromContent(sheet.content)}</p>
+                  <time>{formatTime(sheet.updatedAt)}</time>
+                </article>
+                {outline.length > 0 ? (
+                  <ul className="manage-outline">
+                    {flatten(outline).map((node) => {
+                      const on = chromeMode === 'manage' && manage?.kind === 'outline' && manage.sheetId === sheet.id && manage.line === node.line
+                      return (
+                        <li
+                          key={`${sheet.id}-${node.line}`}
+                          className={on ? 'is-kbd' : ''}
+                          style={{ paddingLeft: `${10 + (node.level - 1) * 12}px` }}
+                          onClick={() => workspace.openAtLine(sheet.id, node.line)}
+                        >
+                          {node.text}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : null}
+              </div>
             )
           })
         )}

@@ -16,22 +16,29 @@ import { detectSlash, type SlashSession } from './slash/commands'
 import { SlashMenu } from './slash/SlashMenu'
 import { detectWiki, type WikiSession } from './wiki'
 import { WikiMenu } from './WikiMenu'
+import { workspace } from '../lib/workspace-store'
 
 type Props = {
   sheetId: string
   content: string
   onChange: (value: string) => void
+  caret: number
+  active: boolean
 }
 
-export function EditorPane({ sheetId, content, onChange }: Props) {
+export function EditorPane({ sheetId, content, onChange, caret, active }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
   const boot = useRef({ id: sheetId, content })
   const [session, setSession] = useState<SlashSession | null>(null)
   const [wiki, setWiki] = useState<WikiSession | null>(null)
+  const caretRef = useRef(caret)
+  const activeRef = useRef(active)
   if (boot.current.id !== sheetId) boot.current = { id: sheetId, content }
   onChangeRef.current = onChange
+  caretRef.current = caret
+  activeRef.current = active
 
   useEffect(() => {
     if (!host.current) return
@@ -47,7 +54,19 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
           folioHighlight,
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           placeholder('输入 / 唤起超级斜杠…'),
-          keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+          keymap.of([
+            {
+              key: 'Escape',
+              run: () => {
+                workspace.cycleChromeMode()
+                return true
+              },
+            },
+            ...defaultKeymap,
+            ...historyKeymap,
+            ...searchKeymap,
+            indentWithTab,
+          ]),
           EditorView.lineWrapping,
           superSyntax,
           mathSyntax,
@@ -57,6 +76,9 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
           EditorView.updateListener.of((update) => {
             if (update.docChanged) onChangeRef.current(update.state.doc.toString())
             if (update.docChanged || update.selectionSet) {
+              const pos = update.state.selection.main.head
+              const line = update.state.doc.lineAt(pos)
+              workspace.setCaret(sheetId, pos, line.number, pos - line.from + 1)
               const nextSlash = detectSlash(update.view)
               const nextWiki = detectWiki(update.view)
               queueMicrotask(() => {
@@ -81,7 +103,10 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
     })
 
     viewRef.current = view
-    view.focus()
+    const start = Math.min(Math.max(0, caretRef.current), view.state.doc.length)
+    view.dispatch({ selection: { anchor: start } })
+    if (activeRef.current) view.focus()
+    else view.contentDOM.blur()
 
     return () => {
       view.destroy()
@@ -97,6 +122,18 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
       changes: { from: 0, to: view.state.doc.length, insert: content },
     })
   }, [content])
+
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    if (active) {
+      const pos = Math.min(Math.max(0, caretRef.current), view.state.doc.length)
+      view.dispatch({ selection: { anchor: pos }, scrollIntoView: true })
+      view.focus()
+    } else {
+      view.contentDOM.blur()
+    }
+  }, [active, sheetId])
 
   return (
     <div className="editor-host">
