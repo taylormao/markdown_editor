@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { parseFlags, safeColor, type SuperFlags } from '../editor/super-syntax'
+import { MermaidBlock } from '../components/MermaidBlock'
 import { renderMath } from './math'
 
 type Block =
@@ -314,6 +315,9 @@ export function MarkdownPreview({ content }: { content: string }) {
         }
         if (block.type === 'hr') return <hr key={key} />
         if (block.type === 'code') {
+          if (block.lang.toLowerCase() === 'mermaid') {
+            return <MermaidBlock key={key} source={block.text} />
+          }
           return (
             <pre key={key} data-lang={block.lang || undefined}>
               <code>{block.text}</code>

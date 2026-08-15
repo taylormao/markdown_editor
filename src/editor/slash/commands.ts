@@ -79,6 +79,15 @@ export const slashCommands: SlashCommand[] = [
     insert: (view, from, to) => replaceRange(view, from, to, '```\n\n```', 4),
   },
   {
+    id: 'mermaid',
+    title: 'Mermaid 图',
+    hint: '```mermaid',
+    aliases: ['mermaid', 'flowchart', 'sequence', '图表', '流程图'],
+    group: 'block',
+    insert: (view, from, to) =>
+      replaceRange(view, from, to, '```mermaid\nflowchart LR\n  A[开始] --> B[下一步]\n```', 21, 15),
+  },
+  {
     id: 'footnote',
     title: '脚注',
     hint: '[^1]',

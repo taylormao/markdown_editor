@@ -684,6 +684,40 @@ button {
   color: var(--ink);
 }
 
+.mermaid-frame {
+  margin: 1em 0;
+  padding: 12px;
+  overflow: auto;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--paper-solid) 88%, transparent);
+}
+
+.mermaid-frame svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.mermaid-wait,
+.mermaid-error {
+  margin: 1em 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+.mermaid-wait {
+  color: var(--ink-faint);
+}
+
+.mermaid-error {
+  color: #b0544a;
+  background: color-mix(in srgb, #b0544a 8%, transparent);
+  white-space: pre-wrap;
+}
+
 .cm-callout {
   background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
