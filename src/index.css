@@ -668,6 +668,22 @@ button {
   font-family: var(--font-serif);
 }
 
+.math-inline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.math-block {
+  margin: 1em 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.katex {
+  font-size: 1.05em;
+  color: var(--ink);
+}
+
 .cm-callout {
   background: color-mix(in srgb, var(--accent) 7%, transparent);
 }

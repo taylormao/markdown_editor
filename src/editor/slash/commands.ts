@@ -150,6 +150,22 @@ export const slashCommands: SlashCommand[] = [
     insert: callout('DANGER', '危险'),
   },
   {
+    id: 'math',
+    title: '行内公式',
+    hint: '$...$',
+    aliases: ['math', 'latex', 'tex', '公式', 'katex'],
+    group: 'mark',
+    insert: (view, from, to) => replaceRange(view, from, to, '$E=mc^2$', 1, 6),
+  },
+  {
+    id: 'math-block',
+    title: '独立公式',
+    hint: '$$...$$',
+    aliases: ['equation', 'display', '公式块'],
+    group: 'block',
+    insert: (view, from, to) => replaceRange(view, from, to, '$$\n\\int_a^b f(x)\\,dx\n$$', 3, 20),
+  },
+  {
     id: 'highlight',
     title: '高亮',
     hint: '==[-h]…==',

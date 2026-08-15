@@ -7,6 +7,7 @@ import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 import { searchKeymap } from '@codemirror/search'
 import { folioEditorTheme, folioHighlight } from './theme'
 import { superSyntax } from './super-syntax'
+import { mathSyntax } from './math-syntax'
 import { calloutDecor } from './callouts'
 import { detectSlash, type SlashSession } from './slash/commands'
 import { SlashMenu } from './slash/SlashMenu'
@@ -43,6 +44,7 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
           keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
           EditorView.lineWrapping,
           superSyntax,
+          mathSyntax,
           calloutDecor,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) onChangeRef.current(update.state.doc.toString())

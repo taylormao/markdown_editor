@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { parseFlags, safeColor, type SuperFlags } from '../editor/super-syntax'
+import { renderMath } from './math'
 
 type Block =
   | { type: 'heading'; level: number; text: string }
@@ -10,6 +11,7 @@ type Block =
   | { type: 'table'; headers: string[]; rows: string[][] }
   | { type: 'hr' }
   | { type: 'footnote'; id: string; text: string }
+  | { type: 'math'; text: string }
 
 const SUPER_RE = /==(?:\[([^\]]*)\]((?:(?!==).)*?)|up((?:(?!==).)*?)|down((?:(?!==).)*?))==/g
 const CALLOUT_RE = /^\[!(NOTE|INFO|TIP|WARNING|ERROR|DANGER)\]\s*/i
@@ -54,7 +56,9 @@ function renderInline(text: string, keyPrefix = 'i'): ReactNode[] {
     } else if (token.kind === 'strong') nodes.push(<strong key={key}>{renderInline(token.value, `${key}-`)}</strong>)
     else if (token.kind === 'em') nodes.push(<em key={key}>{renderInline(token.value, `${key}-`)}</em>)
     else if (token.kind === 'strike') nodes.push(<del key={key}>{renderInline(token.value, `${key}-`)}</del>)
-    else if (token.kind === 'fn') {
+    else if (token.kind === 'math') {
+      nodes.push(<span key={key} className="math-inline" dangerouslySetInnerHTML={{ __html: renderMath(token.value) }} />)
+    } else if (token.kind === 'fn') {
       nodes.push(
         <a key={key} className="fn-ref" href={`#fn-${token.value}`}>
           {token.value}
@@ -73,6 +77,7 @@ type InlineToken =
   | { kind: 'link' | 'image'; value: string; href: string }
   | { kind: 'strong' | 'em' | 'strike'; value: string }
   | { kind: 'fn'; value: string }
+  | { kind: 'math'; value: string }
 
 function tokenizeInline(input: string): InlineToken[] {
   const out: InlineToken[] = []
@@ -90,6 +95,7 @@ function tokenizeInline(input: string): InlineToken[] {
 
   while (rest.length) {
     if (take(/^`([^`]+)`/, (m) => ({ kind: 'code', value: m[1] }))) continue
+    if (take(/^\$([^$\n]+?)\$/, (m) => ({ kind: 'math', value: m[1] }))) continue
     SUPER_RE.lastIndex = 0
     const superMatch = SUPER_RE.exec(rest)
     if (superMatch && superMatch.index === 0) {
@@ -108,7 +114,7 @@ function tokenizeInline(input: string): InlineToken[] {
     if (take(/^\*([^*]+)\*/, (m) => ({ kind: 'em', value: m[1] }))) continue
     if (take(/^_([^_]+)_/, (m) => ({ kind: 'em', value: m[1] }))) continue
 
-    const next = rest.search(/`|==|!\[|\[|\*\*|__|~~|\*|_/)
+    const next = rest.search(/`|\$|==|!\[|\[|\*\*|__|~~|\*|_/)
     if (next < 0) {
       out.push({ kind: 'text', value: rest })
       break
@@ -151,6 +157,29 @@ function parseBlocks(markdown: string): Block[] {
     const line = lines[i]
     if (!line.trim()) {
       i += 1
+      continue
+    }
+
+    const mathLine = line.trim()
+    if (mathLine.startsWith('$$')) {
+      if (mathLine.length > 2 && mathLine.endsWith('$$')) {
+        blocks.push({ type: 'math', text: mathLine.slice(2, -2).trim() })
+        i += 1
+        continue
+      }
+      const body: string[] = []
+      if (mathLine.length > 2) body.push(mathLine.slice(2))
+      i += 1
+      while (i < lines.length && !lines[i].includes('$$')) {
+        body.push(lines[i])
+        i += 1
+      }
+      if (i < lines.length) {
+        const tail = lines[i].replace('$$', '').trim()
+        if (tail) body.push(tail)
+        i += 1
+      }
+      blocks.push({ type: 'math', text: body.join('\n').trim() })
       continue
     }
 
@@ -280,6 +309,9 @@ export function MarkdownPreview({ content }: { content: string }) {
           )
         }
         if (block.type === 'paragraph') return <p key={key}>{renderInline(block.text, key)}</p>
+        if (block.type === 'math') {
+          return <div key={key} className="math-block" dangerouslySetInnerHTML={{ __html: renderMath(block.text, true) }} />
+        }
         if (block.type === 'hr') return <hr key={key} />
         if (block.type === 'code') {
           return (
