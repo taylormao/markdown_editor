@@ -13,9 +13,10 @@ export type SlashSession = {
   from: number
   to: number
   query: string
+  path: string[]
   left: number
   top: number
-  mode: 'list' | 'table'
+  mode: 'list' | 'table' | 'code'
 }
 
 function replaceRange(view: EditorView, from: number, to: number, text: string, cursor: number, selectLen = 0) {
@@ -73,10 +74,10 @@ export const slashCommands: SlashCommand[] = [
   {
     id: 'code',
     title: '代码块',
-    hint: '```',
+    hint: '/code/语言',
     aliases: ['code', '代码', 'fence'],
     group: 'block',
-    insert: (view, from, to) => replaceRange(view, from, to, '```\n\n```', 4),
+    insert: () => undefined,
   },
   {
     id: 'mermaid',
@@ -304,6 +305,12 @@ export const slashCommands: SlashCommand[] = [
   },
 ]
 
+export function parseSlashQuery(raw: string): { path: string[]; query: string } {
+  const parts = raw.split('/')
+  const query = parts.pop() ?? ''
+  return { path: parts.map((part) => part.trim()).filter(Boolean), query: query.trim() }
+}
+
 export function filterCommands(query: string): SlashCommand[] {
   const q = query.trim().toLowerCase()
   if (!q) return slashCommands
@@ -313,6 +320,11 @@ export function filterCommands(query: string): SlashCommand[] {
   })
 }
 
+export function insertCodeFence(view: EditorView, from: number, to: number, fence: string) {
+  const open = fence ? `\`\`\`${fence}\n` : '```\n'
+  replaceRange(view, from, to, `${open}\n\`\`\``, open.length)
+}
+
 export function detectSlash(view: EditorView): Omit<SlashSession, 'mode'> | null {
   const { state } = view
   const main = state.selection.main
@@ -320,13 +332,12 @@ export function detectSlash(view: EditorView): Omit<SlashSession, 'mode'> | null
   const pos = main.head
   const line = state.doc.lineAt(pos)
   const before = line.text.slice(0, pos - line.from)
-  const slash = before.lastIndexOf('/')
-  if (slash < 0) return null
-  if (slash > 0 && !/\s/.test(before[slash - 1])) return null
-  const query = before.slice(slash + 1)
-  if (/\s/.test(query)) return null
+  const match = /(?:^|\s)\/([^\s]*)$/.exec(before)
+  if (!match) return null
 
-  const from = line.from + slash
+  const from = line.from + before.length - match[0].trimStart().length
+  const raw = match[1]
+  const { path, query } = parseSlashQuery(raw)
   const coords = view.coordsAtPos(from)
   if (!coords) return null
   const host = (view.dom.closest('.editor-host') ?? view.dom).getBoundingClientRect()
@@ -334,6 +345,7 @@ export function detectSlash(view: EditorView): Omit<SlashSession, 'mode'> | null
     from,
     to: pos,
     query,
+    path,
     left: Math.min(Math.max(8, coords.left - host.left), host.width - 300),
     top: coords.bottom - host.top + 8,
   }

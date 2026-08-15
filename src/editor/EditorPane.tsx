@@ -3,6 +3,7 @@ import { EditorState } from '@codemirror/state'
 import { EditorView, keymap, placeholder } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
+import { languages } from '@codemirror/language-data'
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
 import { searchKeymap } from '@codemirror/search'
 import { folioEditorTheme, folioHighlight } from './theme'
@@ -37,7 +38,7 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
         doc: boot.current.content,
         extensions: [
           history(),
-          markdown(),
+          markdown({ codeLanguages: languages }),
           folioEditorTheme,
           folioHighlight,
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
@@ -55,8 +56,15 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
               queueMicrotask(() => {
                 setSession((prev) => {
                   if (!next) return null
-                  const keepTable = prev?.mode === 'table' && prev.from === next.from
-                  return { ...next, mode: keepTable ? 'table' : 'list' }
+                  const same = prev?.from === next.from
+                  const codePath = next.path[0] && /^(code|代码|fence)$/i.test(next.path[0])
+                  const mode =
+                    same && prev?.mode === 'table'
+                      ? 'table'
+                      : codePath || (same && prev?.mode === 'code')
+                        ? 'code'
+                        : 'list'
+                  return { ...next, mode }
                 })
               })
             }

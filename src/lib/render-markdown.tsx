@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { parseFlags, safeColor, type SuperFlags } from '../editor/super-syntax'
+import { CodeBlock } from '../components/CodeBlock'
 import { MermaidBlock } from '../components/MermaidBlock'
 import { renderMath } from './math'
 
@@ -318,11 +319,7 @@ export function MarkdownPreview({ content }: { content: string }) {
           if (block.lang.toLowerCase() === 'mermaid') {
             return <MermaidBlock key={key} source={block.text} />
           }
-          return (
-            <pre key={key} data-lang={block.lang || undefined}>
-              <code>{block.text}</code>
-            </pre>
-          )
+          return <CodeBlock key={key} lang={block.lang} code={block.text} />
         }
         if (block.type === 'list') {
           const List = block.ordered ? 'ol' : 'ul'
