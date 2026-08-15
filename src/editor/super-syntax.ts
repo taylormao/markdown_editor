@@ -7,6 +7,7 @@ export type SuperFlags = {
   strike?: boolean
   color?: string
   bg?: string
+  wrap?: 'yuan' | 'fang'
 }
 
 const SUPER_RE = /==(?:\[([^\]]*)\]((?:(?!==).)*?)|up((?:(?!==).)*?)|down((?:(?!==).)*?))==/g
@@ -24,6 +25,8 @@ export function parseFlags(raw: string): SuperFlags {
     if (token === '-b') flags.bold = true
     else if (token === '-i') flags.italic = true
     else if (token === '-d') flags.strike = true
+    else if (token === '-yuan') flags.wrap = 'yuan'
+    else if (token === '-fang') flags.wrap = 'fang'
     else if (token === '-h') {
       flags.color ??= 'white'
       flags.bg ??= 'yellow'
@@ -38,6 +41,40 @@ export function parseFlags(raw: string): SuperFlags {
   return flags
 }
 
+const CIRCLED: Record<string, string> = {
+  '0': '⓪',
+  '1': '①',
+  '2': '②',
+  '3': '③',
+  '4': '④',
+  '5': '⑤',
+  '6': '⑥',
+  '7': '⑦',
+  '8': '⑧',
+  '9': '⑨',
+  '10': '⑩',
+  '11': '⑪',
+  '12': '⑫',
+  '13': '⑬',
+  '14': '⑭',
+  '15': '⑮',
+  '16': '⑯',
+  '17': '⑰',
+  '18': '⑱',
+  '19': '⑲',
+  '20': '⑳',
+}
+
+export function circledGlyph(text: string): string | undefined {
+  return CIRCLED[text.trim()]
+}
+
+export function wrapClass(flags: SuperFlags): string {
+  if (flags.wrap === 'yuan') return 'super-yuan'
+  if (flags.wrap === 'fang') return 'super-fang'
+  return ''
+}
+
 function applyFlags(el: HTMLElement, flags: SuperFlags) {
   if (flags.bold) el.style.fontWeight = '700'
   if (flags.italic) el.style.fontStyle = 'italic'
@@ -45,8 +82,8 @@ function applyFlags(el: HTMLElement, flags: SuperFlags) {
   if (flags.color) el.style.color = flags.color
   if (flags.bg) {
     el.style.background = flags.bg
-    el.style.borderRadius = '4px'
-    el.style.padding = '0 0.22em'
+    el.style.borderRadius = flags.wrap === 'yuan' ? '999px' : '4px'
+    el.style.padding = flags.wrap ? '0' : '0 0.22em'
   }
 }
 
@@ -75,8 +112,9 @@ class StyledWidget extends WidgetType {
   }
   toDOM() {
     const el = document.createElement('span')
-    el.className = 'super-style'
-    el.textContent = this.text
+    const wrap = wrapClass(this.flags)
+    el.className = ['super-style', wrap].filter(Boolean).join(' ')
+    el.textContent = this.flags.wrap === 'yuan' ? circledGlyph(this.text) ?? this.text : this.text
     applyFlags(el, this.flags)
     return el
   }

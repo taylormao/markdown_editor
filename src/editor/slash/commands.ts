@@ -184,6 +184,22 @@ export const slashCommands: SlashCommand[] = [
     insert: (view, from, to) => replaceRange(view, from, to, '==[-h]高亮==', 5, 2),
   },
   {
+    id: 'yuan',
+    title: '圆圈包裹',
+    hint: '==[-yuan]==',
+    aliases: ['yuan', '圆圈', 'circled'],
+    group: 'mark',
+    insert: (view, from, to) => replaceRange(view, from, to, '==[-yuan]5==', 8, 1),
+  },
+  {
+    id: 'fang',
+    title: '方框包裹',
+    hint: '==[-fang]==',
+    aliases: ['fang', '方框', 'kbd', '按键'],
+    group: 'mark',
+    insert: (view, from, to) => replaceRange(view, from, to, '==[-fang]CTRL==', 8, 4),
+  },
+  {
     id: 'style',
     title: '超级样式',
     hint: '==[-b -c=]…==',

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { parseFlags, safeColor, type SuperFlags } from '../editor/super-syntax'
+import { circledGlyph, parseFlags, safeColor, wrapClass, type SuperFlags } from '../editor/super-syntax'
 import { CodeBlock } from '../components/CodeBlock'
 import { MermaidBlock } from '../components/MermaidBlock'
 import { renderMath } from './math'
@@ -26,8 +26,8 @@ function applyStyle(flags: SuperFlags): CSSProperties {
   if (flags.color && safeColor(flags.color)) style.color = flags.color
   if (flags.bg && safeColor(flags.bg)) {
     style.background = flags.bg
-    style.borderRadius = 4
-    style.padding = '0 0.22em'
+    style.borderRadius = flags.wrap === 'yuan' ? 999 : 4
+    style.padding = flags.wrap ? 0 : '0 0.22em'
   }
   return style
 }
@@ -40,9 +40,10 @@ function renderInline(text: string, keyPrefix = 'i', onWiki?: (title: string) =>
     if (token.kind === 'text') nodes.push(<span key={key}>{token.value}</span>)
     else if (token.kind === 'code') nodes.push(<code key={key}>{token.value}</code>)
     else if (token.kind === 'super') {
+      const label = token.flags.wrap === 'yuan' ? circledGlyph(token.value) ?? token.value : token.value
       nodes.push(
-        <span key={key} className="super-style" style={applyStyle(token.flags)}>
-          {token.value}
+        <span key={key} className={['super-style', wrapClass(token.flags)].filter(Boolean).join(' ')} style={applyStyle(token.flags)}>
+          {label}
         </span>,
       )
     } else if (token.kind === 'up') nodes.push(<sup key={key}>{token.value}</sup>)
