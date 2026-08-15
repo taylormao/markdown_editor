@@ -30,8 +30,8 @@ class WikiWidget extends WidgetType {
   }
 }
 
-function selectionTouches(view: EditorView, from: number, to: number): boolean {
-  return view.state.selection.ranges.some((range) => range.from <= to && range.to >= from)
+function selectionInside(view: EditorView, from: number, to: number): boolean {
+  return view.state.selection.ranges.some((range) => range.from > from && range.to < to)
 }
 
 function buildDecorations(view: EditorView): DecorationSet {
@@ -43,7 +43,7 @@ function buildDecorations(view: EditorView): DecorationSet {
     while ((match = WIKI_RE.exec(text))) {
       const start = from + match.index
       const end = start + match[0].length
-      if (selectionTouches(view, start, end)) continue
+      if (selectionInside(view, start, end)) continue
       builder.add(start, end, Decoration.replace({ widget: new WikiWidget(match[1]) }))
     }
   }

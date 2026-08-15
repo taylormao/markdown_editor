@@ -36,8 +36,8 @@ class MathWidget extends WidgetType {
   }
 }
 
-function selectionTouches(view: EditorView, from: number, to: number): boolean {
-  return view.state.selection.ranges.some((range) => range.from <= to && range.to >= from)
+function selectionInside(view: EditorView, from: number, to: number): boolean {
+  return view.state.selection.ranges.some((range) => range.from > from && range.to < to)
 }
 
 function buildDecorations(view: EditorView): DecorationSet {
@@ -49,7 +49,7 @@ function buildDecorations(view: EditorView): DecorationSet {
     eachMath(text, (hit) => {
       const start = from + hit.from
       const end = from + hit.to
-      if (selectionTouches(view, start, end)) return
+      if (selectionInside(view, start, end)) return
       const open = hit.display ? 2 : 1
       builder.add(start, start + open, hide)
       if (start + open < end - open) {

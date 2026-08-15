@@ -9,7 +9,7 @@ import { searchKeymap } from '@codemirror/search'
 import { folioEditorTheme, folioHighlight } from './theme'
 import { superSyntax } from './super-syntax'
 import { mathSyntax } from './math-syntax'
-import { mermaidSyntax } from './mermaid-syntax'
+import { liveBlocks } from './live-blocks'
 import { wikiSyntax } from './wiki-syntax'
 import { calloutDecor } from './callouts'
 import { detectSlash, type SlashSession } from './slash/commands'
@@ -51,7 +51,7 @@ export function EditorPane({ sheetId, content, onChange }: Props) {
           EditorView.lineWrapping,
           superSyntax,
           mathSyntax,
-          mermaidSyntax,
+          liveBlocks,
           wikiSyntax,
           calloutDecor,
           EditorView.updateListener.of((update) => {
