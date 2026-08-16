@@ -421,6 +421,66 @@ button {
   cursor: pointer;
 }
 
+.template-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--ink) 28%, transparent);
+}
+
+.template-dialog {
+  width: min(720px, calc(100vw - 32px));
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--paper-solid);
+  box-shadow: var(--shadow);
+}
+
+.template-dialog header {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.template-dialog header span,
+.template-grid em {
+  color: var(--ink-mute);
+  font-style: normal;
+  font-size: 13px;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.template-grid button {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  text-align: left;
+  background: color-mix(in srgb, var(--bg-deep) 50%, transparent);
+}
+
+.template-grid button:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.yaml-issues {
+  padding: 6px 16px 8px;
+  background: color-mix(in srgb, #b0544a 10%, transparent);
+  color: #b0544a;
+  font-size: 12px;
+}
+
+.yaml-issues p {
+  margin: 2px 0;
+}
+
 .mode-toast {
   position: fixed;
   left: 50%;

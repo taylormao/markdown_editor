@@ -25,8 +25,8 @@ export function searchSheets(query: string, sheets: Sheet[], excludeId?: string)
     .slice(0, 12)
 }
 
-export function insertWikiLink(view: EditorView, from: number, to: number, title: string) {
-  const text = `[[${title}]]`
+export function insertWikiLink(view: EditorView, from: number, to: number, title: string, id?: string) {
+  const text = `[[${id || title}]]`
   view.dispatch({
     changes: { from, to, insert: text },
     selection: { anchor: from + text.length },
@@ -60,5 +60,10 @@ export function detectWiki(view: EditorView): WikiSession | null {
 }
 
 export function openWikiTitle(title: string) {
-  workspace.openSheetByTitle(title)
+  workspace.openWiki(title)
+}
+
+export function displayWiki(ref: string, sheets: { id: string; title: string; content: string }[]): string {
+  const hit = sheets.find((sheet) => sheet.id === ref || sheet.content.includes(`id: ${ref}`))
+  return hit?.title ?? ref
 }

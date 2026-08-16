@@ -24,8 +24,8 @@ export function WikiMenu({ view, session, currentId, onClose }: Props) {
     listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({ block: 'nearest' })
   }, [index])
 
-  const pick = (title: string) => {
-    insertWikiLink(view, session.from, session.to, title)
+  const pick = (title: string, id: string) => {
+    insertWikiLink(view, session.from, session.to, title, id)
     onClose()
   }
   const pickRef = useRef(pick)
@@ -55,7 +55,7 @@ export function WikiMenu({ view, session, currentId, onClose }: Props) {
         if (!item) return
         event.preventDefault()
         event.stopPropagation()
-        pickRef.current(item.title)
+        pickRef.current(item.title, item.id)
       }
     }
     window.addEventListener('keydown', onKey, true)
@@ -77,7 +77,7 @@ export function WikiMenu({ view, session, currentId, onClose }: Props) {
               onMouseEnter={() => setIndex(itemIndex)}
               onMouseDown={(event) => {
                 event.preventDefault()
-        pickRef.current(item.title)
+                pickRef.current(item.title, item.id)
               }}
             >
               <span>{item.title}</span>

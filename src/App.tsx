@@ -4,6 +4,8 @@ import { handleEscape } from './lib/chrome-keys'
 import { Sidebar } from './components/Sidebar'
 import { TabBar } from './components/TabBar'
 import { Toolbar } from './components/Toolbar'
+import { TemplatePicker } from './components/TemplatePicker'
+import { YamlIssues } from './components/YamlIssues'
 
 const EditorPane = lazy(() => import('./editor/EditorPane').then((m) => ({ default: m.EditorPane })))
 const MarkdownPreview = lazy(() => import('./lib/render-markdown').then((m) => ({ default: m.MarkdownPreview })))
@@ -125,7 +127,7 @@ export default function App() {
   if (!sheet) {
     return (
       <div className="app-shell is-empty">
-        <button className="primary-btn" onClick={() => workspace.createSheet()}>
+        <button className="primary-btn" onClick={() => workspace.requestNewSheet()}>
           写下第一篇
         </button>
       </div>
@@ -157,6 +159,7 @@ export default function App() {
               theme={state.theme}
             />
             <TabBar sheets={state.sheets} openTabIds={state.openTabIds} activeSheetId={sheet.id} />
+            <YamlIssues />
           </>
         ) : (
           <button className="focus-exit" onClick={() => workspace.toggleFocus()}>
@@ -184,6 +187,7 @@ export default function App() {
         </section>
       </main>
       {state.toast ? <div className="mode-toast">{state.toast}</div> : null}
+      {state.templatePickerFor ? <TemplatePicker /> : null}
     </div>
   )
 }

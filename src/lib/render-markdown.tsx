@@ -3,6 +3,8 @@ import { circledGlyph, parseFlags, safeColor, wrapClass, type SuperFlags } from 
 import { CodeBlock } from '../components/CodeBlock'
 import { MermaidBlock } from '../components/MermaidBlock'
 import { renderMath } from './math'
+import { displayWiki } from '../editor/wiki'
+import { workspace } from './workspace-store'
 
 type Block =
   | { type: 'heading'; level: number; text: string }
@@ -62,7 +64,7 @@ function renderInline(text: string, keyPrefix = 'i', onWiki?: (title: string) =>
     else if (token.kind === 'wiki') {
       nodes.push(
         <button key={key} type="button" className="wiki-chip" onClick={() => onWiki?.(token.value)}>
-          {token.value}
+          {displayWiki(token.value, workspace.get().sheets)}
         </button>,
       )
     } else if (token.kind === 'math') {

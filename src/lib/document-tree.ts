@@ -1,4 +1,5 @@
 import type { OutlineNode } from '../types'
+import { splitFrontmatter } from './frontmatter'
 
 const headingRe = /^(#{1,6})\s+(.+?)\s*$/
 const listRe = /^(\s*)(?:[-*+]|\d+\.)\s+(.+?)\s*$/
@@ -32,12 +33,16 @@ export function parseOutline(markdown: string): OutlineNode[] {
 }
 
 export function titleFromContent(content: string): string {
-  const line = content.split('\n').find((item) => item.trim().length > 0) ?? ''
+  const doc = splitFrontmatter(content)
+  const yamlTitle = typeof doc.attrs.title === 'string' ? doc.attrs.title.trim() : ''
+  if (yamlTitle) return yamlTitle
+  const line = doc.body.split('\n').find((item) => item.trim().length > 0) ?? ''
   return line.replace(/^#+\s*/, '').replace(/[*_`]/g, '').trim() || '未命名文稿'
 }
 
 export function excerptFromContent(content: string): string {
-  const lines = content
+  const body = splitFrontmatter(content).body
+  const lines = body
     .split('\n')
     .map((line) => line.replace(/^#+\s*/, '').replace(/[*_`>#-]/g, '').trim())
     .filter(Boolean)

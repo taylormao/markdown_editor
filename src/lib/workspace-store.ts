@@ -3,7 +3,9 @@ import type { ChromeMode, Folder, ManageItem, RenameTarget, Sheet, ViewMode, Wor
 import { buildManageList } from './manage-list'
 import { uid } from './id'
 import { titleFromContent } from './document-tree'
+import { asString, splitFrontmatter, stringifyFrontmatter, todayStamp } from './frontmatter'
 import { exportBackup as downloadBackup, importBackupFile, loadWorkspace, saveWorkspace } from './storage'
+import { buildTemplateContent, templateById, validateDoc, type TemplateId, type ValidationIssue } from './templates'
 import { seedSnapshot } from './workspace-io'
 
 type WorkspaceState = WorkspaceSnapshot & {
@@ -20,6 +22,8 @@ type WorkspaceState = WorkspaceSnapshot & {
   expandedSheetIds: string[]
   manageIndex: number
   renameTarget: RenameTarget | null
+  templatePickerFor: string | null
+  yamlIssues: ValidationIssue[]
 }
 
 type Listener = () => void
@@ -47,6 +51,8 @@ let state: WorkspaceState = {
   expandedSheetIds: [],
   manageIndex: 0,
   renameTarget: null,
+  templatePickerFor: null,
+  yamlIssues: [],
 }
 
 function emit() {
@@ -124,6 +130,16 @@ export const workspace = {
     })
   },
   selectSheet(id: string) {
+    const current = state.sheets.find((item) => item.id === state.activeSheetId)
+    if (current && current.id !== id) {
+      const doc = splitFrontmatter(current.content)
+      const issues = validateDoc(doc.attrs, doc.body)
+      if (issues.length) {
+        setState({ yamlIssues: issues })
+        toast('当前文稿缺必填字段，不能切走')
+        return
+      }
+    }
     const sheet = state.sheets.find((item) => item.id === id)
     if (!sheet) return
     setState({
@@ -135,8 +151,13 @@ export const workspace = {
     })
   },
   openSheetByTitle(title: string) {
-    const needle = title.trim().toLowerCase()
-    const sheet = state.sheets.find((item) => item.title.trim().toLowerCase() === needle)
+    workspace.openWiki(title)
+  },
+  openWiki(ref: string) {
+    const needle = ref.trim()
+    const byId = state.sheets.find((item) => item.id === needle || asString(splitFrontmatter(item.content).attrs.id) === needle)
+    const byTitle = state.sheets.find((item) => item.title.trim().toLowerCase() === needle.toLowerCase())
+    const sheet = byId ?? byTitle
     if (!sheet) return
     setState({
       activeSheetId: sheet.id,
@@ -196,6 +217,17 @@ export const workspace = {
       {
         sheets: state.sheets.map((sheet) => {
           if (sheet.id !== id) return sheet
+          const doc = splitFrontmatter(sheet.content)
+          if (doc.hasFence) {
+            doc.attrs.title = next
+            const heading = doc.body.replace(/^(#+\s+).+$/m, `$1${next}`)
+            return {
+              ...sheet,
+              title: next,
+              content: `${stringifyFrontmatter(doc.attrs)}\n${heading.startsWith('#') ? heading : `# ${next}\n\n${doc.body}`}`,
+              updatedAt: Date.now(),
+            }
+          }
           const lines = sheet.content.split('\n')
           const first = lines.findIndex((line) => line.trim().length > 0)
           if (first >= 0) {
@@ -210,17 +242,41 @@ export const workspace = {
       true,
     )
   },
-  createSheet(folderId = state.activeFolderId) {
+  requestNewSheet(folderId = state.activeFolderId) {
+    setState({ templatePickerFor: folderId, sidebarOpen: true, focusMode: false })
+  },
+  closeTemplatePicker() {
+    setState({ templatePickerFor: null })
+  },
+  createSheetFromTemplate(templateId: TemplateId, folderId = state.templatePickerFor ?? state.activeFolderId) {
+    const def = templateById(templateId)
+    if (!def) return
+    if (def.id === 'daily') {
+      const date = todayStamp()
+      const existing = state.sheets.find((sheet) => {
+        const attrs = splitFrontmatter(sheet.content).attrs
+        return asString(attrs.template) === 'daily' && asString(attrs.date) === date
+      })
+      if (existing) {
+        setState({ templatePickerFor: null })
+        workspace.selectSheet(existing.id)
+        toast('今天的晚间笔记已存在，已打开')
+        return
+      }
+    }
     const now = Date.now()
+    const content = buildTemplateContent(def)
+    const attrs = splitFrontmatter(content).attrs
     const sheet: Sheet = {
-      id: uid(),
+      id: asString(attrs.id) || uid(),
       folderId,
-      title: '未命名文稿',
-      content: '',
+      title: titleFromContent(content),
+      content,
       createdAt: now,
       updatedAt: now,
       starred: false,
     }
+    const issues = validateDoc(attrs, splitFrontmatter(content).body)
     setState(
       {
         sheets: [sheet, ...state.sheets],
@@ -229,17 +285,34 @@ export const workspace = {
         openTabIds: [sheet.id, ...state.openTabIds.filter((tab) => tab !== sheet.id)],
         view: 'write',
         focusMode: false,
+        chromeMode: 'edit',
+        templatePickerFor: null,
+        yamlIssues: issues,
       },
       true,
     )
   },
+  createSheet(folderId = state.activeFolderId) {
+    workspace.requestNewSheet(folderId)
+  },
   updateSheetContent(id: string, content: string) {
+    const current = state.sheets.find((sheet) => sheet.id === id)
+    if (!current) return
+    const doc = splitFrontmatter(content)
+    const issues = validateDoc(doc.attrs, doc.body)
+    const blocked = state.activeSheetId !== id && issues.length > 0
+    if (blocked) {
+      setState({ yamlIssues: issues })
+      toast('当前文稿缺必填字段，先补完再离开')
+      return
+    }
     const title = titleFromContent(content)
     setState(
       {
         sheets: state.sheets.map((sheet) =>
           sheet.id === id ? { ...sheet, content, title, updatedAt: Date.now() } : sheet,
         ),
+        yamlIssues: id === state.activeSheetId ? issues : state.yamlIssues,
       },
       true,
     )
@@ -446,9 +519,22 @@ export const workspace = {
   },
   async hydrate() {
     const snapshot = await loadWorkspace()
+    const sheets = snapshot.sheets.map((sheet) => {
+      const doc = splitFrontmatter(sheet.content)
+      if (doc.hasFence && asString(doc.attrs.id)) return sheet
+      const stamped = buildTemplateContent(templateById('spark')!)
+      const base = splitFrontmatter(stamped)
+      base.attrs.title = sheet.title
+      base.attrs.needs_migration = true
+      base.attrs.tags = ['migrated']
+      return {
+        ...sheet,
+        content: `${stringifyFrontmatter(base.attrs)}\n${doc.body || sheet.content}`,
+      }
+    })
     setState({
       folders: snapshot.folders,
-      sheets: snapshot.sheets,
+      sheets,
       activeFolderId: snapshot.activeFolderId,
       activeSheetId: snapshot.activeSheetId,
       openTabIds: snapshot.openTabIds,

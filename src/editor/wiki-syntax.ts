@@ -1,17 +1,20 @@
 import { RangeSetBuilder } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view'
-import { openWikiTitle } from './wiki'
+import { displayWiki, openWikiTitle } from './wiki'
+import { workspace } from '../lib/workspace-store'
 
 const WIKI_RE = /\[\[([^[\]]+)\]\]/g
 
 class WikiWidget extends WidgetType {
   title: string
-  constructor(title: string) {
+  ref: string
+  constructor(title: string, ref: string) {
     super()
     this.title = title
+    this.ref = ref
   }
   eq(other: WikiWidget) {
-    return this.title === other.title
+    return this.title === other.title && this.ref === other.ref
   }
   toDOM() {
     const el = document.createElement('span')
@@ -21,7 +24,7 @@ class WikiWidget extends WidgetType {
     el.addEventListener('mousedown', (event) => {
       event.preventDefault()
       event.stopPropagation()
-      openWikiTitle(this.title)
+      openWikiTitle(this.ref)
     })
     return el
   }
@@ -44,7 +47,8 @@ function buildDecorations(view: EditorView): DecorationSet {
       const start = from + match.index
       const end = start + match[0].length
       if (selectionInside(view, start, end)) continue
-      builder.add(start, end, Decoration.replace({ widget: new WikiWidget(match[1]) }))
+      const label = displayWiki(match[1], workspace.get().sheets)
+      builder.add(start, end, Decoration.replace({ widget: new WikiWidget(label, match[1]) }))
     }
   }
   return builder.finish()
