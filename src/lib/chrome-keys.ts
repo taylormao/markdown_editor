@@ -11,6 +11,11 @@ export function handleEscape(event: KeyboardEvent): boolean {
   if (event.isComposing) return false
   if (isRenameField(event.target)) return false
   if (document.querySelector('.slash-menu')) return false
+  if (workspace.get().yamlEditorOpen) {
+    event.preventDefault()
+    workspace.closeYamlEditor()
+    return true
+  }
   if (event.timeStamp === lastStamp) return true
   lastStamp = event.timeStamp
   event.preventDefault()

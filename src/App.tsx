@@ -6,6 +6,7 @@ import { TabBar } from './components/TabBar'
 import { Toolbar } from './components/Toolbar'
 import { TemplatePicker } from './components/TemplatePicker'
 import { YamlIssues } from './components/YamlIssues'
+import { YamlEditor } from './components/YamlEditor'
 
 const EditorPane = lazy(() => import('./editor/EditorPane').then((m) => ({ default: m.EditorPane })))
 const MarkdownPreview = lazy(() => import('./lib/render-markdown').then((m) => ({ default: m.MarkdownPreview })))
@@ -99,6 +100,11 @@ export default function App() {
         event.preventDefault()
         workspace.toggleFocus()
       }
+      if (meta && event.key.toLowerCase() === 'y' && workspace.get().chromeMode === 'edit') {
+        event.preventDefault()
+        workspace.openYamlEditor()
+        return
+      }
       if (meta && event.key.toLowerCase() === 'n') {
         event.preventDefault()
         workspace.createSheet()
@@ -188,6 +194,7 @@ export default function App() {
       </main>
       {state.toast ? <div className="mode-toast">{state.toast}</div> : null}
       {state.templatePickerFor ? <TemplatePicker /> : null}
+      {state.yamlEditorOpen ? <YamlEditor /> : null}
     </div>
   )
 }

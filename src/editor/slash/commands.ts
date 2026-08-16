@@ -5,7 +5,7 @@ export type SlashCommand = {
   title: string
   hint: string
   aliases: string[]
-  group: 'block' | 'mark' | 'heading'
+  group: 'block' | 'mark'
   insert: (view: EditorView, from: number, to: number) => void
 }
 
@@ -47,12 +47,6 @@ export function insertTable(view: EditorView, from: number, to: number, rows: nu
 function nextFootnote(doc: string): number {
   const nums = [...doc.matchAll(/\[\^(\d+)\]/g)].map((item) => Number(item[1]))
   return (nums.length ? Math.max(...nums) : 0) + 1
-}
-
-function wrapLine(prefix: string) {
-  return (view: EditorView, from: number, to: number) => {
-    replaceRange(view, from, to, prefix, prefix.length)
-  }
 }
 
 function callout(kind: string, label: string) {
@@ -117,7 +111,7 @@ export const slashCommands: SlashCommand[] = [
     hint: '>',
     aliases: ['quote', '引用', 'blockquote'],
     group: 'block',
-    insert: wrapLine('> '),
+    insert: (view, from, to) => replaceRange(view, from, to, '> ', 2),
   },
   {
     id: 'note',
@@ -160,20 +154,20 @@ export const slashCommands: SlashCommand[] = [
     insert: callout('DANGER', '危险'),
   },
   {
-    id: 'math',
-    title: '行内公式',
-    hint: '$...$',
-    aliases: ['math', 'latex', 'tex', '公式', 'katex'],
-    group: 'mark',
-    insert: (view, from, to) => replaceRange(view, from, to, '$E=mc^2$', 1, 6),
-  },
-  {
     id: 'math-block',
     title: '独立公式',
     hint: '$$...$$',
     aliases: ['equation', 'display', '公式块'],
     group: 'block',
     insert: (view, from, to) => replaceRange(view, from, to, '$$\n\\int_a^b f(x)\\,dx\n$$', 3, 20),
+  },
+  {
+    id: 'math',
+    title: '行内公式',
+    hint: '$...$',
+    aliases: ['math', 'latex', 'tex', '公式', 'katex'],
+    group: 'mark',
+    insert: (view, from, to) => replaceRange(view, from, to, '$E=mc^2$', 1, 6),
   },
   {
     id: 'highlight',
@@ -222,102 +216,6 @@ export const slashCommands: SlashCommand[] = [
     aliases: ['sub', 'down', '下标', '分子'],
     group: 'mark',
     insert: (view, from, to) => replaceRange(view, from, to, '==down2==', 6, 1),
-  },
-  {
-    id: 'hr',
-    title: '分割线',
-    hint: '---',
-    aliases: ['hr', '分割', 'divider'],
-    group: 'block',
-    insert: (view, from, to) => replaceRange(view, from, to, '---\n', 4),
-  },
-  {
-    id: 'todo',
-    title: '待办',
-    hint: '- [ ]',
-    aliases: ['todo', 'task', '待办', 'checkbox'],
-    group: 'block',
-    insert: wrapLine('- [ ] '),
-  },
-  {
-    id: 'ul',
-    title: '无序列表',
-    hint: '-',
-    aliases: ['ul', 'list', '列表'],
-    group: 'block',
-    insert: wrapLine('- '),
-  },
-  {
-    id: 'ol',
-    title: '有序列表',
-    hint: '1.',
-    aliases: ['ol', 'ordered', '数字'],
-    group: 'block',
-    insert: wrapLine('1. '),
-  },
-  {
-    id: 'link',
-    title: '链接',
-    hint: '[]()',
-    aliases: ['link', '链接', 'url'],
-    group: 'mark',
-    insert: (view, from, to) => replaceRange(view, from, to, '[链接文字](https://)', 1, 4),
-  },
-  {
-    id: 'image',
-    title: '图片',
-    hint: '![]()',
-    aliases: ['image', 'img', '图片'],
-    group: 'mark',
-    insert: (view, from, to) => replaceRange(view, from, to, '![说明](https://)', 2, 2),
-  },
-  {
-    id: 'h1',
-    title: '一级标题',
-    hint: '#',
-    aliases: ['h1', 'heading1', '标题1'],
-    group: 'heading',
-    insert: wrapLine('# '),
-  },
-  {
-    id: 'h2',
-    title: '二级标题',
-    hint: '##',
-    aliases: ['h2', 'heading2', '标题2'],
-    group: 'heading',
-    insert: wrapLine('## '),
-  },
-  {
-    id: 'h3',
-    title: '三级标题',
-    hint: '###',
-    aliases: ['h3', 'heading3', '标题3'],
-    group: 'heading',
-    insert: wrapLine('### '),
-  },
-  {
-    id: 'h4',
-    title: '四级标题',
-    hint: '####',
-    aliases: ['h4', 'heading4', '标题4'],
-    group: 'heading',
-    insert: wrapLine('#### '),
-  },
-  {
-    id: 'h5',
-    title: '五级标题',
-    hint: '#####',
-    aliases: ['h5', 'heading5', '标题5'],
-    group: 'heading',
-    insert: wrapLine('##### '),
-  },
-  {
-    id: 'h6',
-    title: '六级标题',
-    hint: '######',
-    aliases: ['h6', 'heading6', '标题6'],
-    group: 'heading',
-    insert: wrapLine('###### '),
   },
 ]
 

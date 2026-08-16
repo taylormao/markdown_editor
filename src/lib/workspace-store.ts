@@ -23,6 +23,7 @@ type WorkspaceState = WorkspaceSnapshot & {
   manageIndex: number
   renameTarget: RenameTarget | null
   templatePickerFor: string | null
+  yamlEditorOpen: boolean
   yamlIssues: ValidationIssue[]
 }
 
@@ -52,6 +53,7 @@ let state: WorkspaceState = {
   manageIndex: 0,
   renameTarget: null,
   templatePickerFor: null,
+  yamlEditorOpen: false,
   yamlIssues: [],
 }
 
@@ -257,6 +259,23 @@ export const workspace = {
   },
   closeTemplatePicker() {
     setState({ templatePickerFor: null })
+  },
+  openYamlEditor() {
+    if (state.chromeMode !== 'edit') return
+    setState({ yamlEditorOpen: true })
+  },
+  closeYamlEditor() {
+    setState({ yamlEditorOpen: false })
+  },
+  applyFrontmatter(id: string, attrs: Record<string, import('./frontmatter').YamlValue>) {
+    const sheet = state.sheets.find((item) => item.id === id)
+    if (!sheet) return
+    const doc = splitFrontmatter(sheet.content)
+    const content = `${stringifyFrontmatter({ ...doc.attrs, ...attrs, updated: todayStamp() })}\n${doc.body}`
+    workspace.updateSheetContent(id, content)
+    const next = validateDoc(splitFrontmatter(content).attrs, doc.body)
+    if (!next.length) setState({ yamlEditorOpen: false, yamlIssues: [] })
+    else setState({ yamlIssues: next })
   },
   createSheetFromTemplate(templateId: TemplateId, folderId = state.templatePickerFor ?? state.activeFolderId) {
     const def = templateById(templateId)

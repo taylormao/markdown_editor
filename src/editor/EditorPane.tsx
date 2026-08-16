@@ -19,6 +19,7 @@ import { WikiMenu } from './WikiMenu'
 import { workspace } from '../lib/workspace-store'
 import { handleEscape } from '../lib/chrome-keys'
 import { locateLogical } from '../lib/logical-line'
+import { insertMarkdownLink, insertTaskItem } from './markdown-keys'
 
 type Props = {
   sheetId: string
@@ -61,6 +62,16 @@ export function EditorPane({ sheetId, content, onChange, caret, active }: Props)
               key: 'Escape',
               run: () => {
                 handleEscape(new KeyboardEvent('keydown', { key: 'Escape' }))
+                return true
+              },
+              preventDefault: true,
+            },
+            { key: 'Mod-k', run: insertMarkdownLink, preventDefault: true },
+            { key: 'Mod-l', run: insertTaskItem, preventDefault: true },
+            {
+              key: 'Mod-y',
+              run: () => {
+                workspace.openYamlEditor()
                 return true
               },
               preventDefault: true,
