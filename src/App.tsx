@@ -130,6 +130,10 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey, true)
   }, [])
 
+  if (!state.hydrated) {
+    return <div className="app-shell is-empty">正在铺纸…</div>
+  }
+
   if (!sheet) {
     return (
       <div className="app-shell is-empty">
@@ -154,7 +158,7 @@ export default function App() {
 
       <main className="stage">
         {!state.focusMode ? (
-          <>
+          <div className="stage-top">
             <Toolbar
               view={state.view}
               title={sheet.title}
@@ -166,7 +170,7 @@ export default function App() {
             />
             <TabBar sheets={state.sheets} openTabIds={state.openTabIds} activeSheetId={sheet.id} />
             <YamlIssues />
-          </>
+          </div>
         ) : (
           <button className="focus-exit" onClick={() => workspace.toggleFocus()}>
             退出焦点

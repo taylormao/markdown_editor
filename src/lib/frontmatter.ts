@@ -113,6 +113,22 @@ export function stringifyFrontmatter(attrs: Record<string, YamlValue>): string {
   return `---\n${body}\n---\n`
 }
 
+export function attrsFromYamlSource(src: string): { attrs: Record<string, YamlValue>; ok: boolean; error: string } {
+  const text = src.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n')
+  const trimmed = text.trim()
+  if (!trimmed) return { attrs: {}, ok: true, error: '' }
+  try {
+    if (/^---\s*$/m.test(trimmed.split('\n')[0] ?? '')) {
+      const doc = splitFrontmatter(text.endsWith('\n') ? text : `${text}\n`)
+      if (doc.hasFence) return { attrs: doc.attrs, ok: true, error: '' }
+      return { attrs: {}, ok: false, error: '缺少结束的 ---' }
+    }
+    return { attrs: parseYamlMap(text), ok: true, error: '' }
+  } catch {
+    return { attrs: {}, ok: false, error: 'YAML 无法解析' }
+  }
+}
+
 function dumpKey(key: string, value: YamlValue, indent: number): string {
   const pad = '  '.repeat(indent)
   if (value === null) return `${pad}${key}:`

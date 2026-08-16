@@ -7,6 +7,7 @@ import { asString, splitFrontmatter, stringifyFrontmatter, todayStamp } from './
 import { exportBackup as downloadBackup, importBackupFile, loadWorkspace, saveWorkspace } from './storage'
 import { buildTemplateContent, templateById, validateDoc, type TemplateId, type ValidationIssue } from './templates'
 import { seedSnapshot } from './workspace-io'
+import { collectWikiRefs, mergeRelated, resolveWikiRef } from './wiki-scan'
 
 type WorkspaceState = WorkspaceSnapshot & {
   view: ViewMode
@@ -25,6 +26,7 @@ type WorkspaceState = WorkspaceSnapshot & {
   templatePickerFor: string | null
   yamlEditorOpen: boolean
   yamlIssues: ValidationIssue[]
+  hydrated: boolean
 }
 
 type Listener = () => void
@@ -55,6 +57,7 @@ let state: WorkspaceState = {
   templatePickerFor: null,
   yamlEditorOpen: false,
   yamlIssues: [],
+  hydrated: false,
 }
 
 function emit() {
@@ -62,6 +65,7 @@ function emit() {
 }
 
 function persistSoon() {
+  if (!state.hydrated) return
   state = { ...state, saveState: 'saving' }
   emit()
   window.clearTimeout(persistTimer)
@@ -271,7 +275,11 @@ export const workspace = {
     const sheet = state.sheets.find((item) => item.id === id)
     if (!sheet) return
     const doc = splitFrontmatter(sheet.content)
-    const content = `${stringifyFrontmatter({ ...doc.attrs, ...attrs, updated: todayStamp() })}\n${doc.body}`
+    const related = mergeRelated(
+      attrs.related ?? doc.attrs.related,
+      collectWikiRefs(doc.body).map((ref) => resolveWikiRef(ref, state.sheets)),
+    )
+    const content = `${stringifyFrontmatter({ ...doc.attrs, ...attrs, related, updated: todayStamp() })}\n${doc.body}`
     workspace.updateSheetContent(id, content)
     const next = validateDoc(splitFrontmatter(content).attrs, doc.body)
     if (!next.length) setState({ yamlEditorOpen: false, yamlIssues: [] })
@@ -327,7 +335,24 @@ export const workspace = {
   updateSheetContent(id: string, content: string) {
     const current = state.sheets.find((sheet) => sheet.id === id)
     if (!current) return
-    const doc = splitFrontmatter(content)
+    let nextContent = content
+    const scanned = collectWikiRefs(splitFrontmatter(content).body)
+    if (scanned.length) {
+      const doc0 = splitFrontmatter(content)
+      if (doc0.hasFence) {
+        const related = mergeRelated(
+          doc0.attrs.related,
+          scanned.map((ref) => resolveWikiRef(ref, state.sheets)),
+        )
+        const prev = Array.isArray(doc0.attrs.related) ? doc0.attrs.related.map(String) : []
+        const same = prev.length === related.length && related.every((item, index) => prev[index] === item)
+        if (!same) {
+          doc0.attrs.related = related
+          nextContent = `${stringifyFrontmatter(doc0.attrs)}\n${doc0.body}`
+        }
+      }
+    }
+    const doc = splitFrontmatter(nextContent)
     const issues = validateDoc(doc.attrs, doc.body)
     const blocked = state.activeSheetId !== id && issues.length > 0
     if (blocked) {
@@ -335,11 +360,11 @@ export const workspace = {
       toast('当前文稿缺必填字段，先补完再离开')
       return
     }
-    const title = titleFromContent(content)
+    const title = titleFromContent(nextContent)
     setState(
       {
         sheets: state.sheets.map((sheet) =>
-          sheet.id === id ? { ...sheet, content, title, updatedAt: Date.now() } : sheet,
+          sheet.id === id ? { ...sheet, content: nextContent, title, updatedAt: Date.now() } : sheet,
         ),
         yamlIssues: id === state.activeSheetId ? issues : state.yamlIssues,
       },
@@ -549,6 +574,7 @@ export const workspace = {
     toast('进入编辑模式')
   },
   async hydrate() {
+    try {
     const snapshot = await loadWorkspace()
     const sheets = snapshot.sheets.map((sheet) => {
       const doc = splitFrontmatter(sheet.content)
@@ -574,7 +600,11 @@ export const workspace = {
       theme: snapshot.theme,
       saveState: 'saved',
       yamlIssues: issues,
+      hydrated: true,
     })
+    } catch {
+      setState({ hydrated: true })
+    }
   },
   exportBackup() {
     downloadBackup({

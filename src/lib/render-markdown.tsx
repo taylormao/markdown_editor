@@ -5,6 +5,8 @@ import { MermaidBlock } from '../components/MermaidBlock'
 import { renderMath } from './math'
 import { displayWiki } from '../editor/wiki'
 import { workspace } from './workspace-store'
+import { splitFrontmatter } from './frontmatter'
+import { YamlCard } from '../components/YamlCard'
 
 type Block =
   | { type: 'heading'; level: number; text: string }
@@ -304,7 +306,8 @@ const CALLOUT_LABEL: Record<string, string> = {
 }
 
 export function MarkdownPreview({ content, onWikiClick }: { content: string; onWikiClick?: (title: string) => void }) {
-  const blocks = parseBlocks(content)
+  const fm = splitFrontmatter(content)
+  const blocks = parseBlocks(fm.hasFence ? fm.body : content)
   const inline = (text: string, key: string) => renderInline(text, key, onWikiClick)
 
   if (!content.trim()) {
@@ -313,6 +316,7 @@ export function MarkdownPreview({ content, onWikiClick }: { content: string; onW
 
   return (
     <article className="preview-stage">
+      {fm.hasFence ? <YamlCard attrs={fm.attrs} onWikiClick={onWikiClick} /> : null}
       {blocks.map((block, index) => {
         const key = `b-${index}`
         if (block.type === 'heading') {
@@ -392,3 +396,5 @@ export function MarkdownPreview({ content, onWikiClick }: { content: string; onW
     </article>
   )
 }
+
+

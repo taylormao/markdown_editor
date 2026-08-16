@@ -13,7 +13,6 @@ type Props = {
 const GROUPS: Record<SlashCommand['group'], string> = {
   block: '块',
   mark: '样式',
-  heading: '标题',
 }
 
 function isCodePath(path: string[]) {
@@ -28,10 +27,14 @@ export function SlashMenu({ view, session, onClose, onMode }: Props) {
     () => filterLanguages(isCodePath(session.path) ? session.query : ''),
     [session.path, session.query],
   )
+  const visualItems = useMemo(
+    () => (Object.keys(GROUPS) as SlashCommand['group'][]).flatMap((group) => items.filter((item) => item.group === group)),
+    [items],
+  )
   const [index, setIndex] = useState(0)
   const [hover, setHover] = useState({ rows: 3, cols: 3 })
   const listRef = useRef<HTMLDivElement>(null)
-  const list = codeMode ? langs : items
+  const list = codeMode ? langs : visualItems
   const pathKey = session.path.join('/')
 
   useEffect(() => {
@@ -136,7 +139,7 @@ export function SlashMenu({ view, session, onClose, onMode }: Props) {
     return () => window.removeEventListener('keydown', onKey, true)
   }, [list, index, session, hover, view, onClose, onMode, codeMode])
 
-  const grouped = items.reduce<Record<string, SlashCommand[]>>((acc, item) => {
+  const grouped = visualItems.reduce<Record<string, SlashCommand[]>>((acc, item) => {
     acc[item.group] ??= []
     acc[item.group].push(item)
     return acc
@@ -201,13 +204,13 @@ export function SlashMenu({ view, session, onClose, onMode }: Props) {
             <section key={group}>
               <div className="slash-head">{GROUPS[group]}</div>
               {grouped[group].map((item) => {
-                const active = items[index]?.id === item.id
+                const active = visualItems[index]?.id === item.id
                 return (
                   <button
                     key={item.id}
                     data-active={active}
                     className={active ? 'is-active' : ''}
-                    onMouseEnter={() => setIndex(items.findIndex((entry) => entry.id === item.id))}
+                    onMouseEnter={() => setIndex(visualItems.findIndex((entry) => entry.id === item.id))}
                     onMouseDown={(event) => {
                       event.preventDefault()
                       run(item)

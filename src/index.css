@@ -294,11 +294,15 @@ button {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   border-radius: 22px;
   background: color-mix(in srgb, var(--paper-solid) 86%, transparent);
   box-shadow: var(--shadow);
   overflow: hidden;
+}
+
+.stage-top {
+  min-width: 0;
 }
 
 .app-shell.is-focus .stage {
@@ -480,29 +484,227 @@ button {
 }
 
 .yaml-dialog {
-  width: min(760px, calc(100vw - 28px));
-  max-height: calc(100vh - 48px);
-  overflow: auto;
-  padding: 18px;
-  border-radius: 18px;
-  background: var(--paper-solid);
+  width: min(1240px, calc(100vw - 20px));
+  max-height: calc(100vh - 20px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  padding: 22px 24px 16px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, var(--paper-solid)), var(--paper-solid) 120px);
   box-shadow: var(--shadow);
 }
 
 .yaml-dialog header {
-  display: grid;
-  gap: 4px;
-  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 18px;
 }
 
-.yaml-dialog header span {
+.yaml-dialog header strong {
+  font-family: var(--font-serif);
+  font-size: 22px;
+}
+
+.yaml-dialog header div {
+  display: grid;
+  gap: 4px;
+}
+
+.yaml-dialog header span,
+.yaml-dialog header em {
   color: var(--ink-mute);
   font-size: 12px;
+  font-style: normal;
+}
+
+.yaml-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 16px;
+  min-height: 0;
+}
+
+.yaml-pane {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.yaml-source {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  padding: 12px 14px 10px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-deep) 55%, var(--paper-solid));
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.yaml-source h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.yaml-source textarea {
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--paper-solid) 78%, transparent);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.yaml-source p,
+.yaml-source-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.yaml-source-error {
+  color: #b0544a;
+}
+
+.yaml-section {
+  margin-bottom: 18px;
+  padding: 12px 14px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--paper-solid) 70%, transparent);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.yaml-section h4 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.yaml-card {
+  margin: 4px 4px 22px;
+  padding: 18px 20px 14px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, var(--paper-solid)), var(--paper-solid) 88px);
+  border: 1px solid var(--line);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--accent) 10%, transparent);
+  cursor: pointer;
+}
+
+.yaml-card.is-preview {
+  cursor: default;
+  margin: 0 0 32px;
+}
+
+.yaml-card-kicker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.yaml-card-kicker b {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.yaml-card-kicker i {
+  font-style: normal;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.yaml-card-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.yaml-card-meta,
+.yaml-card small {
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.yaml-card-meta {
+  margin: 6px 0 0;
+}
+
+.yaml-card-chips,
+.yaml-card-related {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.yaml-card-chips em,
+.yaml-card-related button,
+.yaml-card-related em {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--ink);
+  font-style: normal;
+  font-size: 12px;
+}
+
+.yaml-card-summary {
+  margin: 12px 0 0;
+  color: var(--ink-mute);
+  line-height: 1.7;
+  font-family: var(--font-serif);
+}
+
+.yaml-card-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px 16px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line-strong);
+}
+
+.yaml-card-facts div {
+  display: grid;
+  gap: 2px;
+}
+
+.yaml-card-facts dt {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.yaml-card-facts dd {
+  margin: 0;
+  font-size: 13px;
 }
 
 .yaml-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px 12px;
 }
 
@@ -530,9 +732,20 @@ button {
 
 .yaml-dialog footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.yaml-dialog footer span {
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.yaml-dialog footer div {
+  display: flex;
   gap: 8px;
-  margin-top: 16px;
 }
 
 .yaml-issues {
@@ -637,16 +850,32 @@ button {
   white-space: nowrap;
 }
 
-.canvas,
-.editor-host,
-.editor-mount,
-.editor-host .cm-editor {
+.canvas {
   min-height: 0;
   height: 100%;
 }
 
 .editor-host {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 8px 0;
+}
+
+.editor-host .yaml-card {
+  flex: 0 0 auto;
+  max-width: 720px;
+  width: 100%;
+  margin: 8px auto 12px;
+}
+
+.editor-mount,
+.editor-host .cm-editor {
+  flex: 1 1 auto;
+  min-height: 240px;
 }
 
 .canvas {
