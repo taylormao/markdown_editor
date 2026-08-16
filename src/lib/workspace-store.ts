@@ -104,6 +104,22 @@ function manageItems() {
   return buildManageList(state.folders, state.sheets, state.activeFolderId, state.collapsedFolderIds, state.expandedSheetIds)
 }
 
+function currentIssues(): ValidationIssue[] {
+  const current = state.sheets.find((item) => item.id === state.activeSheetId)
+  if (!current) return []
+  const doc = splitFrontmatter(current.content)
+  return validateDoc(doc.attrs, doc.body)
+}
+
+function blockLeave(nextId?: string): boolean {
+  if (nextId && nextId === state.activeSheetId) return false
+  const issues = currentIssues()
+  if (!issues.length) return false
+  setState({ yamlIssues: issues })
+  toast('当前文稿缺必填字段，不能切走')
+  return true
+}
+
 function lineToPos(content: string, line: number): number {
   const lines = content.split('\n')
   let pos = 0
@@ -121,6 +137,7 @@ export const workspace = {
   },
   selectFolder(id: string) {
     const first = state.sheets.find((sheet) => sheet.folderId === id)
+    if (first && blockLeave(first.id)) return
     setState({
       activeFolderId: id,
       activeSheetId: first?.id ?? state.activeSheetId,
@@ -130,16 +147,7 @@ export const workspace = {
     })
   },
   selectSheet(id: string) {
-    const current = state.sheets.find((item) => item.id === state.activeSheetId)
-    if (current && current.id !== id) {
-      const doc = splitFrontmatter(current.content)
-      const issues = validateDoc(doc.attrs, doc.body)
-      if (issues.length) {
-        setState({ yamlIssues: issues })
-        toast('当前文稿缺必填字段，不能切走')
-        return
-      }
-    }
+    if (blockLeave(id)) return
     const sheet = state.sheets.find((item) => item.id === id)
     if (!sheet) return
     setState({
@@ -159,6 +167,7 @@ export const workspace = {
     const byTitle = state.sheets.find((item) => item.title.trim().toLowerCase() === needle.toLowerCase())
     const sheet = byId ?? byTitle
     if (!sheet) return
+    if (blockLeave(sheet.id)) return
     setState({
       activeSheetId: sheet.id,
       activeFolderId: sheet.folderId,
@@ -168,6 +177,7 @@ export const workspace = {
     })
   },
   closeTab(id: string) {
+    if (id === state.activeSheetId && blockLeave()) return
     const remaining = state.openTabIds.filter((tab) => tab !== id)
     const nextId = state.activeSheetId === id ? remaining[remaining.length - 1] : state.activeSheetId
     const next = state.sheets.find((sheet) => sheet.id === nextId)
@@ -397,6 +407,7 @@ export const workspace = {
     if (!tabs.length) return
     const index = Math.max(0, tabs.indexOf(state.activeSheetId))
     const next = tabs[(index + 1) % tabs.length]
+    if (blockLeave(next)) return
     workspace.selectSheet(next)
     setState({ chromeMode: 'select' })
   },
@@ -505,6 +516,7 @@ export const workspace = {
     const sheetId = item.kind === 'sheet' ? item.id : item.sheetId
     const sheet = state.sheets.find((entry) => entry.id === sheetId)
     if (!sheet) return
+    if (blockLeave(sheetId)) return
     const pos = item.kind === 'outline' ? lineToPos(sheet.content, item.line) : state.caretBySheet[sheetId] ?? 0
     setState({
       activeSheetId: sheetId,
@@ -521,7 +533,7 @@ export const workspace = {
     const snapshot = await loadWorkspace()
     const sheets = snapshot.sheets.map((sheet) => {
       const doc = splitFrontmatter(sheet.content)
-      if (doc.hasFence && asString(doc.attrs.id)) return sheet
+      if (doc.hasFence) return sheet
       const stamped = buildTemplateContent(templateById('spark')!)
       const base = splitFrontmatter(stamped)
       base.attrs.title = sheet.title
@@ -532,6 +544,8 @@ export const workspace = {
         content: `${stringifyFrontmatter(base.attrs)}\n${doc.body || sheet.content}`,
       }
     })
+    const active = sheets.find((sheet) => sheet.id === snapshot.activeSheetId) ?? sheets[0]
+    const issues = active ? validateDoc(splitFrontmatter(active.content).attrs, splitFrontmatter(active.content).body) : []
     setState({
       folders: snapshot.folders,
       sheets,
@@ -540,6 +554,7 @@ export const workspace = {
       openTabIds: snapshot.openTabIds,
       theme: snapshot.theme,
       saveState: 'saved',
+      yamlIssues: issues,
     })
   },
   exportBackup() {

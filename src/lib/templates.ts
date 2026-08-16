@@ -202,14 +202,18 @@ export function validateDoc(attrs: Record<string, YamlValue>, body: string): Val
   }
   if (template === 'daily') {
     if (!asString(attrs.date)) issues.push({ field: 'date', message: '晚间笔记必须有 date' })
-    if (!asString(attrs.pride) && !/## 0\./.test(body)) {
-      issues.push({ field: 'pride', message: '必须写下今天最骄傲的事（YAML pride 或正文第 0 条）' })
+    if (!filledPride(attrs.pride, body)) {
+      issues.push({ field: 'pride', message: '必须写下今天最骄傲的事（YAML pride 或正文第 0 条下的内容）' })
     }
   }
   if (template === 'review') {
-    if (!asString(attrs.pride) && !body.includes('最骄傲')) issues.push({ field: 'pride', message: '周回顾必须写最骄傲' })
-    if (!asString(attrs.waste) && !body.includes('最浪费')) issues.push({ field: 'waste', message: '周回顾必须写最浪费' })
-    if (!asStringList(attrs.next_three).length && !body.includes('三件事')) {
+    if (!sectionHasText(body, '本周最骄傲') && !asString(attrs.pride)) {
+      issues.push({ field: 'pride', message: '周回顾必须写最骄傲' })
+    }
+    if (!sectionHasText(body, '本周最浪费') && !asString(attrs.waste)) {
+      issues.push({ field: 'waste', message: '周回顾必须写最浪费' })
+    }
+    if (!asStringList(attrs.next_three).filter(Boolean).length && !numberedHasText(body, '下周只做三件事')) {
       issues.push({ field: 'next_three', message: '周回顾必须写下周三件事' })
     }
   }
@@ -232,4 +236,22 @@ export function validateDoc(attrs: Record<string, YamlValue>, body: string): Val
 
 export function titleFromAttrs(attrs: Record<string, YamlValue>, fallback: string): string {
   return asString(attrs.title) || fallback
+}
+
+function filledPride(value: YamlValue | undefined, body: string): boolean {
+  if (asString(value).trim()) return true
+  return sectionHasText(body, '0. 今天最骄傲') || sectionHasText(body, '今天最骄傲')
+}
+
+function sectionHasText(body: string, heading: string): boolean {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = body.match(new RegExp(`##\\s*${escaped}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`))
+  return Boolean(match?.[1]?.replace(/[-*\\d.\\s]/g, '').trim())
+}
+
+function numberedHasText(body: string, heading: string): boolean {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = body.match(new RegExp(`##\\s*${escaped}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`))
+  const text = match?.[1] ?? ''
+  return /(?:^|\n)\s*\d+\.\s+\S+/.test(text)
 }

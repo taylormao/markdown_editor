@@ -31,12 +31,12 @@ export function splitFrontmatter(content: string): FrontmatterDoc {
 export function parseYamlMap(src: string): Record<string, YamlValue> {
   const lines = src.replace(/\r\n/g, '\n').split('\n')
   const root: Record<string, YamlValue> = {}
-  const stack: { indent: number; target: Record<string, YamlValue> | YamlValue[] }[] = [{ indent: -1, target: root }]
-
-  const currentMap = (): Record<string, YamlValue> => {
-    const top = stack[stack.length - 1].target
-    return Array.isArray(top) ? {} : top
-  }
+  const stack: {
+    indent: number
+    target: Record<string, YamlValue> | YamlValue[]
+    key?: string
+    parent?: Record<string, YamlValue>
+  }[] = [{ indent: -1, target: root }]
 
   for (const rawLine of lines) {
     if (!rawLine.trim() || rawLine.trimStart().startsWith('#')) continue
@@ -48,16 +48,23 @@ export function parseYamlMap(src: string): Record<string, YamlValue> {
     const listMatch = line.match(/^- (.*)$/)
     if (listMatch) {
       const itemRaw = listMatch[1]
-      if (!Array.isArray(parent)) continue
-      const pair = itemRaw.match(/^([\w.-]+):\s*(.*)$/)
-      if (pair && pair[2] === '') {
+      const frame = stack[stack.length - 1]
+      let list = Array.isArray(parent) ? parent : null
+      if (!list && frame.parent && frame.key) {
+        list = []
+        frame.parent[frame.key] = list
+        frame.target = list
+      }
+      if (!list) continue
+      const itemPair = itemRaw.match(/^([\w.-]+):\s*(.*)$/)
+      if (itemPair && itemPair[2] === '') {
         const obj: Record<string, YamlValue> = {}
-        parent.push(obj)
+        list.push(obj)
         stack.push({ indent, target: obj })
-      } else if (pair) {
-        parent.push({ [pair[1]]: parseScalar(pair[2]) })
+      } else if (itemPair) {
+        list.push({ [itemPair[1]]: parseScalar(itemPair[2]) })
       } else {
-        parent.push(parseScalar(itemRaw))
+        list.push(parseScalar(itemRaw))
       }
       continue
     }
@@ -66,16 +73,20 @@ export function parseYamlMap(src: string): Record<string, YamlValue> {
     if (!pair || Array.isArray(parent)) continue
     const key = pair[1]
     const rest = pair[2]
-    if (rest === '' || rest === '|' || rest === '>') {
-      const next = { indent, target: [] as YamlValue[] }
-      parent[key] = next.target
-      stack.push(next)
-    } else {
-      parent[key] = parseScalar(rest)
+    if (rest === '|' || rest === '>') {
+      parent[key] = ''
+      continue
     }
+    if (rest === '') {
+      parent[key] = ''
+      const nextList: YamlValue[] = []
+      stack.push({ indent, target: nextList, key, parent })
+      continue
+    }
+    parent[key] = parseScalar(rest)
   }
 
-  return currentMap() === root ? root : root
+  return root
 }
 
 function parseScalar(raw: string): YamlValue {
