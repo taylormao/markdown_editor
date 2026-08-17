@@ -7,6 +7,8 @@ import { Toolbar } from './components/Toolbar'
 import { TemplatePicker } from './components/TemplatePicker'
 import { YamlIssues } from './components/YamlIssues'
 import { YamlEditor } from './components/YamlEditor'
+import { WorkflowDialogs } from './components/WorkflowDialogs'
+import { PasswordGate } from './components/PasswordGate'
 
 const EditorPane = lazy(() => import('./editor/EditorPane').then((m) => ({ default: m.EditorPane })))
 const MarkdownPreview = lazy(() => import('./lib/render-markdown').then((m) => ({ default: m.MarkdownPreview })))
@@ -24,6 +26,12 @@ export default function App() {
 
   useEffect(() => {
     void workspace.hydrate()
+  }, [])
+
+  useEffect(() => {
+    const persist = () => workspace.persistImmediately()
+    window.addEventListener('pagehide', persist)
+    return () => window.removeEventListener('pagehide', persist)
   }, [])
 
   useEffect(() => {
@@ -105,9 +113,13 @@ export default function App() {
         workspace.openYamlEditor()
         return
       }
-      if (meta && event.key.toLowerCase() === 'n') {
+      if ((meta || event.altKey) && event.key.toLowerCase() === 'n') {
         event.preventDefault()
-        workspace.createSheet()
+        workspace.requestQuickSheet()
+      }
+      if (meta && event.shiftKey && event.key.toLowerCase() === 'e') {
+        event.preventDefault()
+        void workspace.prepareFinishWriting()
       }
       if (meta && event.key === '1') {
         event.preventDefault()
@@ -199,6 +211,8 @@ export default function App() {
       {state.toast ? <div className="mode-toast">{state.toast}</div> : null}
       {state.templatePickerFor ? <TemplatePicker /> : null}
       {state.yamlEditorOpen ? <YamlEditor /> : null}
+      <WorkflowDialogs />
+      <PasswordGate />
     </div>
   )
 }

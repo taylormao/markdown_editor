@@ -76,6 +76,9 @@ export function Toolbar({ view, title, content, saveState, focusMode, sidebarOpe
         <button className="text-btn" title="导出工作区备份" onClick={() => workspace.exportBackup()}>
           备份
         </button>
+        <button className="text-btn" title="结束本次写作（Ctrl+Shift+E）" onClick={() => void workspace.prepareFinishWriting()}>
+          结束写作
+        </button>
         <label className="text-btn" title="导入工作区备份">
           <IconImport />
           导入
