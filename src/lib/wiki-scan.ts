@@ -43,3 +43,13 @@ export function mergeRelated(existing: unknown, scanned: string[]): string[] {
   })
   return keep
 }
+
+export function normalizeWikiRefs(body: string, sheets: { id: string; title: string; content: string }[]): string {
+  WIKI.lastIndex = 0
+  return body.replace(WIKI, (match, raw: string) => {
+    const ref = raw.trim()
+    const resolved = resolveWikiRef(ref, sheets)
+    if (!resolved || resolved === ref) return match
+    return `[[${resolved}]]`
+  })
+}
