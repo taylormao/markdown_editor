@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -7,27 +7,34 @@ import { normalizeSnapshot, seedSnapshot, toWorkspaceFile, type WorkspaceFile } 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 export const dataDir = join(root, 'data')
 export const workspacePath = join(dataDir, 'workspace.json')
+export const workspaceBackupPath = join(dataDir, 'workspace.backup.json')
 
-function ensureFile() {
-  mkdirSync(dataDir, { recursive: true })
+function readSnapshot(path: string): WorkspaceFile | null {
   try {
-    readFileSync(workspacePath, 'utf8')
+    const normalized = normalizeSnapshot(JSON.parse(readFileSync(path, 'utf8')) as WorkspaceFile)
+    return normalized ? toWorkspaceFile(normalized) : null
   } catch {
-    writeFileSync(workspacePath, JSON.stringify(toWorkspaceFile(seedSnapshot()), null, 2), 'utf8')
+    return null
   }
 }
 
+function writeJson(path: string, value: WorkspaceFile) {
+  const temporary = `${path}.tmp`
+  writeFileSync(temporary, JSON.stringify(value, null, 2), 'utf8')
+  renameSync(temporary, path)
+}
+
 export function readWorkspace(): WorkspaceFile {
-  ensureFile()
-  try {
-    const parsed = JSON.parse(readFileSync(workspacePath, 'utf8')) as WorkspaceFile
-    const normalized = normalizeSnapshot(parsed)
-    if (normalized) return toWorkspaceFile(normalized)
-  } catch {
-    /* rewrite seed */
+  mkdirSync(dataDir, { recursive: true })
+  const current = readSnapshot(workspacePath)
+  if (current) return current
+  const backup = readSnapshot(workspaceBackupPath)
+  if (backup) {
+    writeJson(workspacePath, backup)
+    return backup
   }
   const seed = toWorkspaceFile(seedSnapshot())
-  writeFileSync(workspacePath, JSON.stringify(seed, null, 2), 'utf8')
+  writeJson(workspacePath, seed)
   return seed
 }
 
@@ -36,7 +43,8 @@ export function writeWorkspace(raw: unknown): WorkspaceFile {
   if (!normalized) throw new Error('invalid workspace')
   const file = toWorkspaceFile(normalized)
   mkdirSync(dataDir, { recursive: true })
-  writeFileSync(workspacePath, JSON.stringify(file, null, 2), 'utf8')
+  if (readSnapshot(workspacePath)) copyFileSync(workspacePath, workspaceBackupPath)
+  writeJson(workspacePath, file)
   return file
 }
 

@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 data/workspace.json
+data/workspace.backup.json
+data/config.json
 dist-ssr
 *.local
 
@@ -26,5 +28,6 @@ dist-ssr
 
 # opencode internal state
 .omo/
+.playwright-mcp/
 project_all_files.txt
 tree_output.txt
