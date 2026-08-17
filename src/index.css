@@ -434,18 +434,41 @@ button {
   background: color-mix(in srgb, var(--ink) 28%, transparent);
 }
 
-.template-dialog {
+.template-dialog,
+.workflow-dialog,
+.password-dialog {
   width: min(720px, calc(100vw - 32px));
+  max-height: calc(100dvh - 24px);
   padding: 18px;
-  border-radius: 18px;
+  border-radius: 8px;
   background: var(--paper-solid);
   box-shadow: var(--shadow);
 }
 
 .template-dialog header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.workflow-dialog header,
+.password-dialog header {
   display: grid;
   gap: 4px;
   margin-bottom: 12px;
+}
+
+.template-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.template-dialog header > div {
+  display: grid;
+  gap: 4px;
 }
 
 .template-dialog header span,
@@ -459,6 +482,24 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  padding: 2px 2px 12px;
+}
+
+.dialog-close {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  color: var(--ink-mute);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.dialog-close:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
 .template-grid button {
@@ -472,6 +513,99 @@ button {
 
 .template-grid button:hover {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.template-grid button.is-active {
+  outline: 2px solid color-mix(in srgb, var(--accent) 54%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.workflow-dialog {
+  width: min(620px, calc(100vw - 32px));
+}
+
+.workflow-dialog header span,
+.password-dialog header span {
+  color: var(--ink-mute);
+  font-size: 13px;
+}
+
+.workflow-list {
+  max-height: min(52vh, 480px);
+  overflow: auto;
+  display: grid;
+  gap: 6px;
+  margin: 14px 0;
+}
+
+.workflow-list label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-deep) 48%, transparent);
+}
+
+.workflow-list span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.workflow-list b,
+.workflow-list em {
+  overflow-wrap: anywhere;
+}
+
+.workflow-list em {
+  color: var(--ink-mute);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.workflow-dialog footer,
+.password-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.password-dialog {
+  width: min(420px, calc(100vw - 32px));
+}
+
+.password-dialog input {
+  width: 100%;
+  margin: 14px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+@media (max-width: 520px) {
+  .template-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 28px);
+    padding: 14px;
+  }
+
+  .template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .template-grid button {
+    min-width: 0;
+    padding: 10px;
+  }
+
+  .template-grid b,
+  .template-grid em {
+    overflow-wrap: anywhere;
+  }
 }
 
 .yaml-mask {
