@@ -1,7 +1,12 @@
-import type { Folder, Sheet, WorkspaceSnapshot } from '../types'
+import type { Folder, Sheet, SystemFolderKey, WorkspaceSnapshot } from '../types'
 import { createSeed } from './sample'
 
-export const WORKSPACE_VERSION = 2
+export const WORKSPACE_VERSION = 3
+
+const systemFolderKeys = new Set<SystemFolderKey>([
+  'inbox', 'templates', 'projects', 'project', 'meeting', 'areas', 'daily', 'review',
+  'resources', 'video', 'literature', 'clip', 'publish', 'archives', 'uncategorized',
+])
 
 export type WorkspaceFile = WorkspaceSnapshot & {
   version: number
@@ -14,6 +19,8 @@ export function normalizeSnapshot(raw: Partial<WorkspaceSnapshot> | null | undef
     name: folder.name || '未命名文件夹',
     order: folder.order ?? index,
     parentId: folder.parentId ?? null,
+    systemKey: folder.systemKey,
+    docType: folder.docType,
   }))
   const folderIds = new Set(folders.map((folder) => folder.id))
   const sheets = (raw.sheets ?? []).map((sheet) => ({
@@ -27,9 +34,11 @@ export function normalizeSnapshot(raw: Partial<WorkspaceSnapshot> | null | undef
   }))
   if (!sheets.length) return null
   const sheetIds = new Set(sheets.map((sheet) => sheet.id))
-  const activeSheetId = sheetIds.has(raw.activeSheetId ?? '') ? raw.activeSheetId! : sheets[0].id
-  const activeFolderId = folderIds.has(raw.activeFolderId ?? '')
-    ? raw.activeFolderId!
+  const requestedSheetId = raw.activeSheetId ?? ''
+  const requestedFolderId = raw.activeFolderId ?? ''
+  const activeSheetId = sheetIds.has(requestedSheetId) ? requestedSheetId : sheets[0].id
+  const activeFolderId = folderIds.has(requestedFolderId)
+    ? requestedFolderId
     : sheets.find((sheet) => sheet.id === activeSheetId)?.folderId ?? folders[0].id
   const openTabIds = (raw.openTabIds ?? [activeSheetId]).filter((id) => sheetIds.has(id))
   return {
@@ -39,6 +48,8 @@ export function normalizeSnapshot(raw: Partial<WorkspaceSnapshot> | null | undef
     activeSheetId,
     openTabIds: openTabIds.length ? openTabIds : [activeSheetId],
     theme: raw.theme === 'light' || raw.theme === 'dark' ? raw.theme : 'system',
+    tracking: raw.tracking ?? {},
+    disabledSystemFolderKeys: (raw.disabledSystemFolderKeys ?? []).filter((key): key is SystemFolderKey => systemFolderKeys.has(key as SystemFolderKey)),
   }
 }
 
@@ -55,6 +66,8 @@ export function seedSnapshot(): WorkspaceSnapshot {
     activeSheetId: seed.sheets[0].id,
     openTabIds: [seed.sheets[0].id],
     theme: 'system',
+    tracking: {},
+    disabledSystemFolderKeys: [],
   }
 }
 

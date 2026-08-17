@@ -11,6 +11,31 @@ export type Folder = {
   name: string
   order: number
   parentId: string | null
+  systemKey?: SystemFolderKey
+  docType?: string
+}
+
+export type SystemFolderKey =
+  | 'inbox'
+  | 'templates'
+  | 'projects'
+  | 'project'
+  | 'meeting'
+  | 'areas'
+  | 'daily'
+  | 'review'
+  | 'resources'
+  | 'video'
+  | 'literature'
+  | 'clip'
+  | 'publish'
+  | 'archives'
+  | 'uncategorized'
+
+export type SheetTracking = {
+  baselineFingerprint?: string
+  touched: boolean
+  pendingClassification: boolean
 }
 
 export type Sheet = {
@@ -38,4 +63,6 @@ export type WorkspaceSnapshot = {
   activeSheetId: string
   openTabIds: string[]
   theme: 'system' | 'light' | 'dark'
+  tracking: Record<string, SheetTracking>
+  disabledSystemFolderKeys: SystemFolderKey[]
 }
