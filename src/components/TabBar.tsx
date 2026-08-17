@@ -9,7 +9,7 @@ type Props = {
 }
 
 export function TabBar({ sheets, openTabIds, activeSheetId }: Props) {
-  const { chromeMode, renameTarget } = useWorkspace()
+  const { chromeMode, renameTarget, tracking } = useWorkspace()
   const barRef = useRef<HTMLDivElement>(null)
   const tabs = openTabIds
     .map((id) => sheets.find((sheet) => sheet.id === id))
@@ -26,6 +26,8 @@ export function TabBar({ sheets, openTabIds, activeSheetId }: Props) {
     <div ref={barRef} className={`tab-bar ${chromeMode === 'select' ? 'is-select' : ''}`} tabIndex={-1}>
       {tabs.map((sheet) => {
         const renaming = renameTarget?.kind === 'sheet' && renameTarget.id === sheet.id && chromeMode === 'select'
+        const record = tracking[sheet.id]
+        const showClose = tabs.length > 1 || Boolean(record?.touched || record?.pendingClassification)
         return (
           <button
             key={sheet.id}
@@ -42,7 +44,7 @@ export function TabBar({ sheets, openTabIds, activeSheetId }: Props) {
                 defaultValue={sheet.title}
                 onClick={(event) => event.stopPropagation()}
                 onBlur={(event) => {
-                  workspace.renameSheet(sheet.id, event.target.value)
+                  workspace.requestRenameSheet(sheet.id, event.target.value)
                   workspace.clearRename()
                 }}
                 onKeyDown={(event) => {
@@ -56,8 +58,9 @@ export function TabBar({ sheets, openTabIds, activeSheetId }: Props) {
             ) : (
               <span>{sheet.title}</span>
             )}
-            {tabs.length > 1 ? (
+            {showClose ? (
               <i
+                title={tabs.length === 1 ? '结束本次写作' : '关闭标签'}
                 onClick={(event) => {
                   event.stopPropagation()
                   workspace.closeTab(sheet.id)

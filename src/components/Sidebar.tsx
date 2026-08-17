@@ -85,7 +85,7 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
           <span className="brand-mark" />
           <span>Folio</span>
         </div>
-        <button className="ghost-btn" title="新建文稿" onClick={() => workspace.createSheet()}>
+        <button className="ghost-btn" title="快速新建（Ctrl+N / Alt+N）" onClick={() => workspace.requestQuickSheet()}>
           <IconPlus />
         </button>
       </div>
@@ -145,7 +145,7 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
             </button>
           )
         })}
-        <button className="folder-item is-muted" onClick={() => workspace.createFolder()}>
+        <button className="folder-item is-muted" onClick={() => workspace.requestCreateFolder()}>
           <IconPlus size={14} />
           <span>新文件夹</span>
         </button>
@@ -180,7 +180,7 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
                         defaultValue={sheet.title}
                         onClick={(event) => event.stopPropagation()}
                         onBlur={(event) => {
-                          workspace.renameSheet(sheet.id, event.target.value)
+                            workspace.requestRenameSheet(sheet.id, event.target.value)
                           setRenaming(null)
                           workspace.clearRename()
                         }}
@@ -211,7 +211,7 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
                         title="删除"
                         onClick={(event) => {
                           event.stopPropagation()
-                          if (confirm('删除这篇文稿？')) workspace.deleteSheet(sheet.id)
+                          if (confirm('将这篇文稿移入 999-未分类？')) workspace.requestDeleteSheet(sheet.id)
                         }}
                       >
                         <IconTrash />
@@ -254,22 +254,22 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
           onRename={() => startRename(menu.target)}
           onDelete={() => {
             if (menu.target.kind === 'sheet') {
-              if (confirm('删除这篇文稿？')) workspace.deleteSheet(menu.target.id)
+              if (confirm('将这篇文稿移入 999-未分类？')) workspace.requestDeleteSheet(menu.target.id)
             } else if (folders.length > 1 && confirm('删除这个文件夹？其中的文稿会移到第一个文件夹。')) {
-              workspace.deleteFolder(menu.target.id)
+              workspace.requestDeleteFolder(menu.target.id)
             }
             setMenu(null)
           }}
           onMove={
             menu.target.kind === 'sheet'
               ? (folderId) => {
-                  workspace.moveSheet(menu.target.id, folderId)
+                  workspace.requestMoveSheet(menu.target.id, folderId)
                   setMenu(null)
                 }
               : undefined
           }
           onNewSheet={
-            menu.target.kind === 'folder'
+            menu.target.kind === 'folder' && (folders.find((folder) => folder.id === menu.target.id)?.docType || !folders.find((folder) => folder.id === menu.target.id)?.systemKey)
               ? () => {
                   workspace.createSheet(menu.target.id)
                   setMenu(null)
@@ -279,8 +279,7 @@ export function Sidebar({ folders, sheets, activeFolderId, activeSheetId, query 
           onNewFolder={
             menu.target.kind === 'folder'
               ? () => {
-                  const id = workspace.createFolder(menu.target.id)
-                  startRename({ kind: 'folder', id })
+                  workspace.requestCreateFolder(menu.target.id)
                 }
               : undefined
           }

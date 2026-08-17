@@ -57,8 +57,8 @@ export function ContextMenu({
     <div className="ctx-menu" ref={ref} style={{ left, top }} role="menu">
       {target.kind === 'folder' ? (
         <>
-          <button onClick={onNewSheet}>新建文稿</button>
-          <button onClick={onNewFolder}>新建子文件夹</button>
+          {onNewSheet ? <button onClick={onNewSheet}>新建文稿</button> : null}
+          {onNewFolder ? <button onClick={onNewFolder}>新建子文件夹</button> : null}
         </>
       ) : null}
       <button onClick={onRename}>重命名</button>
