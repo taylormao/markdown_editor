@@ -29,7 +29,7 @@ export async function loadWorkspace(): Promise<WorkspaceSnapshot> {
   return fromCache() ?? seedSnapshot()
 }
 
-export async function saveWorkspace(snapshot: WorkspaceSnapshot): Promise<void> {
+export async function saveWorkspace(snapshot: WorkspaceSnapshot, keepalive = false): Promise<void> {
   const file = toWorkspaceFile(snapshot)
   localStorage.setItem(KEY, JSON.stringify(file))
   try {
@@ -37,6 +37,7 @@ export async function saveWorkspace(snapshot: WorkspaceSnapshot): Promise<void> 
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(file),
+      keepalive,
     })
   } catch {
     /* keep browser cache if disk API is down */
