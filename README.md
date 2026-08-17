@@ -1,183 +1,306 @@
-# Folio 1.1.0
+# Folio 1.4.0
 
-沉浸式 Markdown 写作台。界面参考 Effie 的退让式三栏：文稿箱、卡片列表、写作区。同一份文稿可在写作、预览、大纲、导图之间切换。
+Folio 是一个本地优先的沉浸式 Markdown 写作台。它以 CodeMirror 6 为编辑核心，通过 YAML frontmatter、稳定文稿 id、双链和 PARA 目录组织写作过程，并提供写作、预览、大纲和导图四种视图。
 
-## 如何使用
+## 启动
 
 ```bash
 npm install
 npm run dev
 ```
 
-浏览器打开 `http://127.0.0.1:5173`。
+浏览器打开 `http://127.0.0.1:5173/`。
 
 ```bash
-npm run build    # 类型检查 + 生产构建
-npm run preview  # 预览构建结果
 npm run lint     # oxlint
+npm run build    # TypeScript 检查 + 生产构建
+npm run preview  # 预览生产构建
 ```
 
-开发时数据写在项目里的 `data/workspace.json`（文件夹层级、文稿、双链 id 都在这份快照里）。工具栏「备份 / 导入」可导出或恢复完整工作区，关系不变。`localStorage` 仅作离线缓存。
+## 1.4.0 重点
 
----
+- 固定 PARA 文件组织：收集箱、模板、项目、领域、资源、归档和未分类
+- 9 个文稿 type、11 个模板；`templates.ts` 仍是应用内模板源
+- `000-Template/` 保存由模板生成的 Markdown YAML 骨架和目录说明书
+- 快速新建采用 type → 具体模板两级选择，新文稿先进入收集箱
+- 目录内新建只显示该目录 type 对应的模板
+- 收集箱非 `spark` 文稿使用 SHA-256 基线指纹追踪真实修改
+- 启动时先处理待归类文稿，再选择继续编辑的文稿
+- “结束写作”按 type 自动归类本轮完成的内容
+- 超级密码保护手动移动、创建子目录、重命名和删除等危险操作
+- 删除文稿为软删除：移动到 `999-未分类` 并标记 `status: trashed`
+- 可解析的 `[[标题]]` 保存时规范为 `[[稳定 id]]`，重命名后显示当前标题
+- `workspace.backup.json` 用于主快照损坏时自动恢复
+- 修复 CodeMirror block / 跨行 decoration 导致的刷新空白问题
 
-## 已完成功能
+完整开发过程见 [`docs/development-log.md`](docs/development-log.md)。
 
-### 工作区与界面
+## PARA 目录
 
-- 三栏退让布局：左侧毛玻璃文稿箱 + 卡片列表，右侧编辑舞台
-- 浅色 / 深色 / 跟随系统
-- 焦点模式：隐藏侧栏与工具栏
-- 自动保存（约 420ms 防抖），状态点显示「正在保存 / 已保存」
-- 字数统计、逻辑行号（见下）
-- 嵌套文件夹 + 文稿卡片（星标、摘要、时间）
-- 标签栏：多文稿同时打开，点击或快捷键切换
+```text
+收集箱
+000-模板
+100-项目
+  110-项目          project
+  120-会议          meeting
+200-领域
+  210-每日          daily
+  220-复盘          review
+300-资源
+  310-视频          video
+  320-读书          literature
+  330-收藏          clip
+  340-publish       tutorial
+400-归档
+999-未分类
+```
 
-### 写作编辑器（所见即所得）
+- `spark` 正式保留在收集箱。
+- Ctrl+N / Alt+N 快速创建的其他 type 先进入收集箱。
+- 项目父目录、领域父目录和资源父目录只负责组织；请在具体 type 子目录内创建文稿。
+- 详细用途见 [`000-Template/目录说明书.md`](000-Template/目录说明书.md)。
 
-基于 CodeMirror 6。闭合后的块会立刻渲染；光标进入块内部才回到源码。
+## 文稿类型与模板
 
-- 标题、列表、引用、分割线、待办
-- 表格闭合即渲染
-- ` ```lang ` 代码块：写作区与预览均语法高亮
-- ` ```mermaid ` 流程图等
-- `$...$` / `$$...$$` KaTeX 公式
-- Callout：`> [!NOTE|INFO|TIP|WARNING|ERROR|DANGER]`
-- 脚注 `[^1]`
-- 双链 `[[文稿名]]`：输入 `[[` 联想补全，点击在新标签打开
-- `==` 超级语法（见下）
+| type | 模板 | 用途 |
+|---|---|---|
+| `spark` | `spark` | 快速捕捉念头 |
+| `daily` | `daily` | 每日反省，一天一篇，可补昨天 |
+| `review` | `review` | 周回顾与阶段总结 |
+| `video` | `video-episode` / `video-series` | 单集视频笔记与系列目录 |
+| `literature` | `literature` | 读书和长文研究 |
+| `tutorial` | `tutorial-note` / `tutorial-publish` | 技巧备忘与发布成稿 |
+| `clip` | `clip` | 外部收藏、原因和下一步 |
+| `project` | `project` | 项目状态、下一步和 backlog |
+| `meeting` | `meeting` | 与会者、决议和待办 |
 
-### 超级斜杠 `/`
+每篇模板文稿包含稳定 id，格式为：
 
-路径筛选，例如 `/code/python`。
+```text
+{YYYYMMDD}-{type}-{4位随机字符}
+```
 
-- 一级：表格、代码块、Mermaid、脚注、引用/Callout、公式、高亮、上下标、超级样式、圆圈/方框、列表、链接、图片、标题
-- 表格：二级选行列
-- 代码块：二级选语言（C/C++/Python/JS/TS/Go/Rust/SQL/Shell 等）
-- 方向键 + 回车 / Tab / 再按 `/` 进入下级
+## 新建文稿
 
-### `==` 超级语法
+### 快速新建
 
-| 写法 | 效果 |
+使用以下任一入口：
+
+- `Ctrl+N`：保留给能把该按键交给页面的环境和未来桌面壳
+- `Alt+N`：浏览器中的可靠快捷键
+- 侧栏顶部 `+`
+
+流程：
+
+1. 选择 type；
+2. 使用上下键和 Enter 选择，或直接点击；
+3. 再选择该 type 下的具体模板；
+4. 文稿创建到收集箱。
+
+注意：Chrome / Edge 通常将物理 `Ctrl+N` 保留为“新建浏览器窗口”，网页无法可靠拦截，因此浏览器中请使用 `Alt+N` 或侧栏 `+`。
+
+### 目录内新建
+
+在侧栏具体 type 文件夹上右键，或用管理模式的 Menu 键打开菜单，再选择“新建文稿”。系统只显示该目录对应的模板，文稿直接保存在当前目录。
+
+## 收集箱写作流程
+
+Folio 为收集箱中的非 `spark` 文稿维护三个状态：
+
+- `baselineFingerprint`：本轮编辑前的 SHA-256 指纹
+- `touched`：本轮是否发生过编辑动作
+- `pendingClassification`：是否仍需决定归类位置
+
+只打开、阅读、预览和切换标签不算编辑。正文、标题或 YAML 变化后才设置 touched；结束写作时再次计算指纹：
+
+- 与基线相同：说明修改已完全撤销，不产生新的待归类状态
+- 与基线不同：进入本轮归类清单
+- 选择暂留：继续放在收集箱，下次启动仍提示
+- 选择归类：按 type 自动移动，不要求超级密码
+
+启动顺序固定为：
+
+1. 处理历史待归类文稿；
+2. 选择本次继续编辑的收集箱文稿；
+3. 所选文稿以标签打开，第一个获得焦点。
+
+点击工具栏“结束写作”或按 `Ctrl+Shift+E` 可主动整理。本轮最后一个待整理标签的关闭按钮也会触发提醒。浏览器直接关闭时只保存状态，不强行弹窗。
+
+## 超级密码与危险操作
+
+首次危险操作会要求设置超级密码。密码按已确定方案以明文保存在本地 `data/config.json`，该文件已被 Git 忽略。
+
+需要密码：
+
+- 手动移动文稿
+- 创建文件夹或子文件夹
+- 重命名文稿
+- 删除文稿
+- 删除系统预设文件夹
+
+不需要密码：
+
+- 系统自动按 type 归类
+- 删除用户自行建立的文件夹
+
+超级密码是本地操作确认机制，不是账户认证或远程安全边界。开发服务器的 API 只应在可信本机环境使用，不应直接暴露到公网。
+
+## 软删除
+
+删除文稿不会立即销毁内容：
+
+1. 输入超级密码；
+2. 文稿移动到 `999-未分类`；
+3. YAML `status` 改为 `trashed`。
+
+永久删除机制尚未实现。
+
+## YAML 编辑
+
+- `Ctrl+Y` 打开 YAML 编辑器
+- 左侧为结构化表单，右侧为 YAML 源码
+- 两侧双向同步；源码非法时保留上一次有效表单并禁用保存
+- 缺少必填字段时显示问题提示，并阻止切换到其他文稿
+- 编辑区顶部和预览模式共用 YAML 封面卡片
+
+主要通用字段：
+
+```yaml
+id:
+type:
+template:
+title:
+created:
+updated:
+status:
+tags: []
+topics: []
+summary:
+related: []
+milestones: []
+needs_migration: false
+```
+
+## 双链
+
+- 输入 `[[` 显示文稿联想菜单
+- 上下键选择，Enter / Tab 插入
+- 联想插入的是稳定 id，界面显示文稿当前标题
+- 手写 `[[标题]]` 在目标可解析时自动保存为 `[[稳定 id]]`
+- frontmatter 的 `related` 同步合并稳定 id
+- 未能解析的未来链接保持原样
+
+## Markdown 编辑能力
+
+编辑器基于 CodeMirror 6。闭合后的块立即渲染，光标进入块内部时恢复源码。
+
+- 标题、段落、列表、待办、引用、分割线
+- Markdown 表格
+- 代码围栏与 highlight.js
+- Mermaid 图表（严格安全模式）
+- `$...$` 与 `$$...$$` KaTeX 公式
+- Callout：`NOTE / INFO / TIP / WARNING / ERROR / DANGER`
+- 脚注
+- 双链
+- `==` 超级样式、上下标、圆圈和方框包裹
+- `/` 超级斜杠菜单：表格尺寸、代码语言和常用块/样式
+
+## 视图与焦点模式
+
+- `Ctrl+1`：写作
+- `Ctrl+2`：预览
+- `Ctrl+3`：大纲
+- `Ctrl+4`：导图
+- `Ctrl+\`：显示或隐藏侧栏
+- `Ctrl+.`：焦点模式
+
+`Esc` 在无弹窗时循环：
+
+```text
+编辑模式 → 标签选择模式 → 管理模式 → 编辑模式
+```
+
+弹窗打开时，Esc 优先关闭当前弹窗或返回模板上一级，不会穿透触发模式切换。
+
+## 常用快捷键
+
+| 快捷键 | 功能 |
 |---|---|
-| `==[-b -i -d]文字==` | 粗体 / 斜体 / 删除线 |
-| `==[-h]文字==` | 黄底白字高亮 |
-| `==[-c=red -bgc=#ffcead]文字==` | 前景 / 背景色（色名或 `#rrggbb`） |
-| `==up2==` / `==down2==` | 上标 / 下标 |
-| `==[-yuan]5==` | ⑤（0–20 用圈号） |
-| `==[-fang]CTRL==` | 方框按键样式 |
-
-### 预览 / 大纲 / 导图
-
-- **预览**：完整渲染 Markdown + 上述扩展
-- **大纲**：由标题和列表生成树
-- **导图**：同一棵树的横向节点图
-
-### 文件管理
-
-- 右键或键盘 `Menu`：重命名、删除
-- 文稿：移动到其他文件夹
-- 文件夹：新建文稿、新建子文件夹；删除会递归子文件夹，文稿移到剩余第一个文件夹
-- 双击也可重命名
-
-### Esc 三态焦点
-
-`Esc` 循环：编辑模式 → 标签选择模式 → 管理模式 → 编辑模式。切换时底部 toast，右上角状态条同步。
-
-| 模式 | 操作 |
-|---|---|
-| 编辑 | 正常写作；离开时记住该文稿光标 |
-| 选择 | `Tab` 下一标签，`F2` 改名，`Enter` 回编辑 |
-| 管理 | 上下选文件夹/文稿/大纲，左右折叠展开，`F2` 改名，`Enter` 打开（大纲跳到对应位置） |
-
-状态条示例：
-
-- `编辑模式 : row17 : col36 : 435字 61词`（row 为逻辑块行）
-- `选择模式 ：[当前标签文稿名]`
-- `管理模式 ：[当前选中的文件夹或文稿名]`
-
-### 逻辑行号
-
-不是物理换行。标题、空行、段落（可多行）、列表项（含子项）、整张表、整段代码/Mermaid/公式/Callout、独立图片或链接，各算 1 行。`==` 样式跟所在段落走。
-
-### 其他快捷键
-
-| 键 | 作用 |
-|---|---|
-| `Esc` | 编辑 / 选择 / 管理循环 |
+| `Alt+N` | 浏览器快速新建 |
+| `Ctrl+N` | 快速新建（浏览器可能保留） |
+| `Ctrl+Shift+E` | 结束本次写作 |
+| `Ctrl+Y` | YAML 编辑器 |
+| `Ctrl+K` | 插入 Markdown 链接 |
+| `Ctrl+L` | 插入待办项 |
+| `Ctrl+1/2/3/4` | 写作 / 预览 / 大纲 / 导图 |
 | `Ctrl+\` | 侧栏 |
 | `Ctrl+.` | 焦点模式 |
-| `Ctrl+N` | 新建文稿 |
-| `Ctrl+1/2/3/4` | 写作 / 预览 / 大纲 / 导图 |
-| `Menu` | 文件列表右键菜单 |
+| `Esc` | 关闭弹窗或循环焦点模式 |
+| `Menu` | 打开文件/文件夹上下文菜单 |
 
----
+## 数据与备份
 
-## 技术栈
-
-| 层 | 选型 |
+| 路径 | 用途 |
 |---|---|
-| UI | React 19 + TypeScript + Vite 8 |
-| 编辑器 | CodeMirror 6 + `@codemirror/lang-markdown` + `@codemirror/language-data` |
-| 公式 | KaTeX |
-| 图表 | Mermaid（动态 import） |
-| 代码高亮 | highlight.js |
-| Lint | oxlint |
-| 状态 | 自研 `useSyncExternalStore` 工作区 store，非 Redux |
-| 持久化 | `localStorage` JSON 快照 |
+| `data/workspace.json` | 主工作区快照：目录、文稿、标签、主题和追踪状态 |
+| `data/workspace.backup.json` | 上一次有效快照；主文件损坏时自动恢复 |
+| `data/config.json` | 本地配置和明文超级密码，Git 忽略 |
+| `localStorage['folio.workspace.v1']` | API 不可用时的浏览器缓存 |
 
-设计取舍：本机无 Rust，桌面壳（Tauri）未接入；热路径仍按块更新，避免整篇重解析。
+工具栏“备份”导出完整 JSON，“导入”恢复目录、sheet id 和双链关系。单篇可导出 Markdown。
 
----
+`workspace.json`、自动备份和 `config.json` 都已加入 `.gitignore`，不会随源码推送。换电脑请使用工作区备份文件或工具栏导出功能迁移数据。
 
 ## 项目结构
 
-```
+```text
 markdown_editor/
-├── index.html
-├── package.json
+├── 000-Template/               # 模板 Markdown 与目录说明书
+├── data/                        # 本地工作区、自动备份与配置
+├── docs/development-log.md      # 开发日志和设计决策
+├── server/
+│   ├── workspace.ts             # /api/workspace
+│   └── config.ts                # /api/config
 ├── src/
-│   ├── App.tsx                 # 壳、快捷键、视图切换
-│   ├── main.tsx
-│   ├── index.css
-│   ├── types.ts
-│   ├── components/             # 侧栏、标签、工具栏、右键、大纲/导图、代码/Mermaid
-│   ├── editor/                 # CodeMirror 与实时装饰
-│   │   ├── EditorPane.tsx
-│   │   ├── live-blocks.ts      # 表格/代码/Mermaid 闭合渲染
-│   │   ├── super-syntax.ts     # == 语法
-│   │   ├── math-syntax.ts
-│   │   ├── wiki-syntax.ts / wiki.ts
-│   │   ├── callouts.ts
-│   │   └── slash/              # / 命令盘
-│   └── lib/
-│       ├── workspace-store.ts  # 全局状态
-│       ├── storage.ts          # localStorage
-│       ├── render-markdown.tsx # 预览解析
-│       ├── document-tree.ts    # 大纲树
-│       ├── logical-line.ts     # 逻辑行
-│       ├── folders.ts
-│       ├── chrome-keys.ts      # Esc 去重
-│       ├── math.ts / mermaid.ts
-│       └── sample.ts           # 首次种子文稿
-└── public/
+│   ├── components/              # 侧栏、标签、工具栏、模板与工作流弹窗
+│   ├── editor/                  # CodeMirror 扩展与交互
+│   ├── lib/
+│   │   ├── workspace-store.ts   # 工作区协调层
+│   │   ├── workspace-folders.ts # 固定目录与迁移
+│   │   ├── sheet-tracking.ts    # 指纹计算
+│   │   ├── workspace-io.ts      # 快照规范化和版本
+│   │   ├── wiki-scan.ts         # 双链扫描、解析与规范化
+│   │   └── storage.ts           # API 与 localStorage
+│   ├── App.tsx
+│   └── types.ts
+└── vite.config.ts
 ```
 
----
+## 技术栈
 
-## 数据存放
+- React 19
+- TypeScript 6
+- Vite 8
+- CodeMirror 6
+- KaTeX
+- Mermaid
+- highlight.js
+- oxlint
+- 自研 `useSyncExternalStore` 工作区状态
 
-- **主存储**：项目目录 `data/workspace.json`（开发服务器 `/api/workspace` 读写）
-- **缓存**：浏览器 `localStorage['folio.workspace.v1']`（API 不可用时回退）
-- **备份**：工具栏导出 JSON，导入时保留 folder/sheet id、parentId、双链标题
-- **内容**：`folders`（含 `parentId`）、`sheets`（标题、正文、星标、时间）、`activeFolderId`、`activeSheetId`、`openTabIds`、`theme`
-- **运行时不落盘**：视图、Esc 模式、光标记忆、折叠展开、toast
-- **标题**：取正文第一行非空文本；重命名会改第一行标题
+## 已知边界
 
-换电脑请带走 `data/workspace.json`，或用工具栏「备份」导出 JSON。单篇可用导出 Markdown。
-
----
+- 当前运行形态是浏览器应用，尚未接入 Tauri/Electron 桌面壳。
+- `Ctrl+N` 在多数浏览器中属于保留快捷键，请使用 `Alt+N` 或侧栏 `+`。
+- 实体 Markdown 目录与虚拟 workspace 文件夹的双向同步尚未实现。
+- 永久删除、插件系统、主题扩展和 AI 文稿迁移工具仍在规划阶段。
+- `workspace-store.ts` 仍偏大；进一步拆分应在补齐自动化状态机测试后进行。
 
 ## 版本
 
-当前 **1.1.0**。此前迭代见 git tag：`v1.0.0` 正式版，`v0.2.0` 预览 … `v0.8.0` 嵌套文件夹。
+当前版本：**1.4.0**。
+
+- `v1.4.0`：PARA 文件组织、收集箱工作流、超级密码、软删除、指纹追踪、模板目录和稳定双链
+- `v1.3.1`：CodeMirror block / 跨行 decoration 空白页修复
+- `v1.3.0`：YAML 分栏编辑、YAML 卡片和 related 自动合并
+- 更早版本见 Git tags
