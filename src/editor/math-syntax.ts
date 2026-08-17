@@ -1,5 +1,5 @@
-import { RangeSetBuilder } from '@codemirror/state'
-import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view'
+import { RangeSetBuilder, StateField, type EditorState, type Transaction } from '@codemirror/state'
+import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view'
 import { eachMath, renderMath } from '../lib/math'
 
 class HiddenWidget extends WidgetType {
@@ -36,43 +36,37 @@ class MathWidget extends WidgetType {
   }
 }
 
-function selectionInside(view: EditorView, from: number, to: number): boolean {
-  return view.state.selection.ranges.some((range) => range.from > from && range.to < to)
+function selectionInside(state: EditorState, from: number, to: number): boolean {
+  return state.selection.ranges.some((range) => range.from > from && range.to < to)
 }
 
-function buildDecorations(view: EditorView): DecorationSet {
+function buildDecorations(state: EditorState): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>()
   const hide = Decoration.replace({ widget: new HiddenWidget() })
 
-  for (const { from, to } of view.visibleRanges) {
-    const text = view.state.doc.sliceString(from, to)
-    eachMath(text, (hit) => {
-      const start = from + hit.from
-      const end = from + hit.to
-      if (selectionInside(view, start, end)) return
-      const open = hit.display ? 2 : 1
-      builder.add(start, start + open, hide)
-      if (start + open < end - open) {
-        builder.add(start + open, end - open, Decoration.replace({ widget: new MathWidget(hit.tex, hit.display) }))
-      }
-      builder.add(end - open, end, hide)
-    })
-  }
+  const text = state.doc.toString()
+  eachMath(text, (hit) => {
+    const start = hit.from
+    const end = hit.to
+    if (selectionInside(state, start, end)) return
+    const open = hit.display ? 2 : 1
+    builder.add(start, start + open, hide)
+    if (start + open < end - open) {
+      builder.add(start + open, end - open, Decoration.replace({ widget: new MathWidget(hit.tex, hit.display) }))
+    }
+    builder.add(end - open, end, hide)
+  })
 
   return builder.finish()
 }
 
-export const mathSyntax = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet
-    constructor(view: EditorView) {
-      this.decorations = buildDecorations(view)
-    }
-    update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet) {
-        this.decorations = buildDecorations(update.view)
-      }
-    }
+export const mathSyntax = StateField.define<DecorationSet>({
+  create(state) {
+    return buildDecorations(state)
   },
-  { decorations: (value) => value.decorations },
-)
+  update(decorations: DecorationSet, transaction: Transaction) {
+    if (!transaction.docChanged && !transaction.selection) return decorations
+    return buildDecorations(transaction.state)
+  },
+  provide: (field) => EditorView.decorations.from(field),
+})

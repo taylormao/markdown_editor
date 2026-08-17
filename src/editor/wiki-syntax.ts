@@ -3,7 +3,7 @@ import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, typ
 import { displayWiki, openWikiTitle } from './wiki'
 import { workspace } from '../lib/workspace-store'
 
-const WIKI_RE = /\[\[([^[\]]+)\]\]/g
+const WIKI_RE = /\[\[([^[\]\n]+)\]\]/g
 
 class WikiWidget extends WidgetType {
   title: string
