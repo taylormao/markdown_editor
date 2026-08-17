@@ -24,6 +24,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# opencode internal state.omo/
+# opencode internal state
+.omo/
 project_all_files.txt
 tree_output.txt
