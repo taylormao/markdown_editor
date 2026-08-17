@@ -1,12 +1,12 @@
-import { RangeSetBuilder } from '@codemirror/state'
-import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view'
+import { RangeSetBuilder, StateField, type EditorState, type Transaction } from '@codemirror/state'
+import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view'
 import hljs from 'highlight.js/lib/common'
 import { renderMermaid } from '../lib/mermaid'
 
 type BlockHit = { from: number; to: number; kind: 'code' | 'table'; lang?: string; source: string }
 
-function selectionInside(view: EditorView, from: number, to: number): boolean {
-  return view.state.selection.ranges.some((range) => range.from > from && range.to < to)
+function selectionInside(state: EditorState, from: number, to: number): boolean {
+  return state.selection.ranges.some((range) => range.from > from && range.to < to)
 }
 
 function splitCells(line: string): string[] {
@@ -21,14 +21,14 @@ function isSepRow(line: string): boolean {
   return /^\s*\|?(\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$/.test(line)
 }
 
-function collectFences(view: EditorView): BlockHit[] {
+function collectFences(state: EditorState): BlockHit[] {
   const hits: BlockHit[] = []
   let openFrom: number | null = null
   let bodyFrom = 0
   let lang = ''
 
-  for (let i = 1; i <= view.state.doc.lines; i++) {
-    const line = view.state.doc.line(i)
+  for (let i = 1; i <= state.doc.lines; i++) {
+    const line = state.doc.line(i)
     if (openFrom == null) {
       const open = /^```([\w+-]*)\s*$/.exec(line.text.trim())
       if (open) {
@@ -43,7 +43,7 @@ function collectFences(view: EditorView): BlockHit[] {
         to: line.to,
         kind: 'code',
         lang,
-        source: view.state.doc.sliceString(bodyFrom, end),
+        source: state.doc.sliceString(bodyFrom, end),
       })
       openFrom = null
     }
@@ -51,9 +51,9 @@ function collectFences(view: EditorView): BlockHit[] {
   return hits
 }
 
-function collectTables(view: EditorView): BlockHit[] {
+function collectTables(state: EditorState): BlockHit[] {
   const hits: BlockHit[] = []
-  const doc = view.state.doc
+  const doc = state.doc
   let i = 1
   while (i < doc.lines) {
     const line = doc.line(i)
@@ -82,11 +82,9 @@ function collectTables(view: EditorView): BlockHit[] {
 
 class LiveWidget extends WidgetType {
   hit: BlockHit
-  view: EditorView
-  constructor(hit: BlockHit, view: EditorView) {
+  constructor(hit: BlockHit) {
     super()
     this.hit = hit
-    this.view = view
   }
   eq(other: LiveWidget) {
     return this.hit.kind === other.hit.kind && this.hit.lang === other.hit.lang && this.hit.source === other.hit.source
@@ -96,8 +94,10 @@ class LiveWidget extends WidgetType {
     wrap.className = 'live-block'
     wrap.addEventListener('mousedown', (event) => {
       event.preventDefault()
-      this.view.dispatch({ selection: { anchor: this.hit.from + 1 } })
-      this.view.focus()
+      const view = EditorView.findFromDOM(wrap)
+      if (!view) return
+      view.dispatch({ selection: { anchor: this.hit.from + 1 } })
+      view.focus()
     })
 
     if (this.hit.kind === 'table') {
@@ -175,16 +175,16 @@ function renderCode(lang: string, source: string): HTMLPreElement {
   return pre
 }
 
-function buildDecorations(view: EditorView): DecorationSet {
+function buildDecorations(state: EditorState): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>()
-  const blocks = [...collectFences(view), ...collectTables(view)].sort((a, b) => a.from - b.from)
+  const blocks = [...collectFences(state), ...collectTables(state)].sort((a, b) => a.from - b.from)
   for (const hit of blocks) {
-    if (selectionInside(view, hit.from, hit.to)) continue
+    if (selectionInside(state, hit.from, hit.to)) continue
     builder.add(
       hit.from,
       hit.to,
       Decoration.replace({
-        widget: new LiveWidget(hit, view),
+        widget: new LiveWidget(hit),
         block: true,
       }),
     )
@@ -192,17 +192,13 @@ function buildDecorations(view: EditorView): DecorationSet {
   return builder.finish()
 }
 
-export const liveBlocks = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet
-    constructor(view: EditorView) {
-      this.decorations = buildDecorations(view)
-    }
-    update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet) {
-        this.decorations = buildDecorations(update.view)
-      }
-    }
+export const liveBlocks = StateField.define<DecorationSet>({
+  create(state) {
+    return buildDecorations(state)
   },
-  { decorations: (value) => value.decorations },
-)
+  update(decorations: DecorationSet, transaction: Transaction) {
+    if (!transaction.docChanged && !transaction.selection) return decorations
+    return buildDecorations(transaction.state)
+  },
+  provide: (field) => EditorView.decorations.from(field),
+})
