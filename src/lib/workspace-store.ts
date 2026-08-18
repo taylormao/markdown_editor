@@ -40,7 +40,7 @@ type WorkspaceState = WorkspaceSnapshot & {
   passwordGateLabel: string
   startupStep: StartupStep
   finishWritingIds: string[]
-  
+
   // 新增检索相关
   searchOpen: boolean
   searchQuery: string
