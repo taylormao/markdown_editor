@@ -66,3 +66,16 @@ export type WorkspaceSnapshot = {
   tracking: Record<string, SheetTracking>
   disabledSystemFolderKeys: SystemFolderKey[]
 }
+
+export type SearchResult = {
+  id: string
+  title: string
+  content: string
+  folderId: string
+  folderPath: string
+  fileName: string
+  tags: string[]
+  score: number
+  line?: number
+  matchIndex?: number
+}

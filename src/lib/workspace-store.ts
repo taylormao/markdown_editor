@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import type { ChromeMode, Folder, ManageItem, RenameTarget, Sheet, ViewMode, WorkspaceSnapshot } from '../types'
+import type { ChromeMode, Folder, ManageItem, RenameTarget, SearchResult, Sheet, ViewMode, WorkspaceSnapshot } from '../types'
 import { buildManageList } from './manage-list'
 import { uid } from './id'
 import { titleFromContent } from './document-tree'
@@ -40,6 +40,11 @@ type WorkspaceState = WorkspaceSnapshot & {
   passwordGateLabel: string
   startupStep: StartupStep
   finishWritingIds: string[]
+  
+  // 新增检索相关
+  searchOpen: boolean
+  searchQuery: string
+  searchResults: SearchResult[]
 }
 
 type Listener = () => void
@@ -81,6 +86,9 @@ let state: WorkspaceState = {
   passwordGateLabel: '',
   startupStep: null,
   finishWritingIds: [],
+  searchOpen: false,
+  searchQuery: '',
+  searchResults: [],
 }
 
 function emit() {
