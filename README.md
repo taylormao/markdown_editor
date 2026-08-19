@@ -304,7 +304,7 @@ markdown_editor/
 | `sheets` | 文稿操作：重命名/移动/分类/软删除/星标/内容更新 | `renameSheet` `requestRenameSheet` `applyFrontmatter` `updateSheetContent` `toggleStar` `moveSheet` `requestMoveSheet` `classifySheet` `deleteSheet` `requestDeleteSheet` |
 | `workflow` | 结束写作/启动归类/继续编辑 + 持久化 | `prepareFinishWriting` `finishWriting` `closeFinishWriting` `classifyPending` `openContinued` `closeStartup` `hydrate` `exportBackup` `persistImmediately` `importBackup` |
 
-对外 `workspace` 对象共 62 个方法（`subscribe`/`get` + 60 个动作），由 `test/store/workspace-api-shape.test.ts` 硬契约锁定，重构时方法名集合不得增删。
+对外 `workspace` 对象共 62 个方法（`subscribe`/`get` + 60 个动作），由 `test/store/workspace-api-shape.test.ts` 硬契约锁定，重构时方法名集合不得增删。完整签名与类型参考见 [`docs/api.md`](docs/api.md)。
 
 ## 技术栈
 
