@@ -1,5 +1,68 @@
 # Folio 开发日志
 
+## v1.5.0 - 2026-08-19
+
+### workspace-store 状态机切片化重构（10 步拆分）
+
+在 v1.4.1 补齐自动化测试套件（vitest 109→112 + E2E 10）作为安全网之后，执行了 README「已知边界」中承诺的拆分：将 `src/lib/workspace-store.ts`（944 行单文件状态机）重构为 `src/lib/workspace-store/` 目录结构。全程零行为变更，对外 API 逐字不变。
+
+#### 目标结构
+
+```text
+src/lib/workspace-store/
+├── index.ts                 # 组装层（82 行）：ctx 构建 + 7 slice spread + ctx.actions 回填 + useWorkspace
+├── core.ts                  # state 唯一所有者（get/set/toast/persistSoon/currentSnapshot/subscribe + 420ms 防抖持久化）
+├── tracking.ts              # 会话级指纹追踪（sessionBaselines/createdThisSession/touchedThisSession）
+├── helpers.ts               # 纯函数层（lineToPos/sheetType/isTrackedSheetIn/computeIssues/manageItemsIn）
+├── types.ts                 # 类型契约（WorkspaceState/SliceContext/ProtectedActionRef/WorkspaceActions 等）
+└── slices/
+    ├── chrome.ts            # 视图/UI/密码门/YAML/rename/caret/模式循环（124 行）
+    ├── folders.ts           # 目录创建/重命名/删除（60 行）
+    ├── manage.ts            # 管理模式扁平列表/展开折叠/确认（111 行）
+    ├── navigation.ts        # 选择文稿/文件夹/关闭标签/双链打开（76 行）
+    ├── templates.ts         # 快速新建/模板两级选择/创建文稿（101 行）
+    ├── sheets.ts            # 文稿操作：重命名/移动/分类/软删除/星标/内容更新（182 行）
+    └── workflow.ts          # 结束写作/启动归类/继续编辑 + 持久化（hydrate/export/import）（159 行）
+```
+
+#### 拆分步骤与策略
+
+分 10 步执行，每步独立验证（`npx tsc -p tsconfig.app.json --noEmit` + vitest 112 + E2E 10 全绿）：
+
+1. **基线锁定**：先写 `test/store/workspace-api-shape.test.ts`（62 方法 set 硬比对 + useWorkspace 形状 + store 契约 3 用例），把对外 API 钉死为拆分前后必须逐字一致。
+2. **helpers.ts**：把 lineToPos/sheetType/isTrackedSheetIn/computeIssues/manageItemsIn 五个纯函数迁出（显式传参，无模块级 state 依赖）。
+3. **core.ts + tracking.ts**：state 唯一所有者（含 420ms 防抖持久化、toast、protectedAction ref、currentSnapshot）与会话级指纹追踪（含 markTouched 的 `void baseline.then()` 异步回调，回调内重新 `core.get()` 实时读）。
+4. **types.ts + ctx 骨架**：定义 SliceContext 依赖注入接口；workspace-store.ts 改为从 ctx 构建，为切片化做准备。
+5-10. **7 个 slice 逐一迁出**：chrome → folders → manage → navigation → templates → sheets → workflow，每个 slice 采用统一工厂模式 `createXSlice(ctx)` 返回 `satisfies Partial<WorkspaceActions>`（不写显式返回类型注解，避免 spread 后方法变 optional 触发 TS2722）；跨族调用一律走 `ctx.actions.X` 延迟解析（禁 slice 间直接 import）；state 一律 `ctx.get()/ctx.set()` 实时读取。
+
+最后 `git mv src/lib/workspace-store.ts src/lib/workspace-store/index.ts` 把原单文件原地变为组装层（944 → 82 行），并修复 mv 后失效的相对 import 路径。
+
+#### 关键设计决策
+
+- **slice 工厂不写返回类型注解**：`} satisfies Partial<WorkspaceActions>` 保持方法具体类型，这是有意的（避免 spread 使方法变 optional 导致下游 TS2722），不是遗漏。
+- **ctx.actions = workspace 组装后回填**：有意的延迟解析设计，让 slice 之间零循环 import。
+- **危险操作统一走 ctx.runProtected**：submitPassword 成功后 `protectedAction.current.run()`，密码只存引用不存值。
+- **hydrated 为 false 时 persistSoon 直接 return**：hydrate 前不持久化（有意保留原语义）。
+- **每次迁移都是纯机械替换**：getState→ctx.get()、workspace.X→ctx.actions.X、setState→ctx.set，方法体逻辑与原单文件逐字一致。
+
+#### 验证结果
+
+- 每步 `npx tsc -p tsconfig.app.json --noEmit` exit 0；vitest 112/112；Playwright E2E 10/10。
+- 拆分完成后全量复验：tsc exit 0、vitest 112/112、E2E 10/10、oxlint 0 warning/0 error（顺带清理 v1.4.1 遗留的 `SEED_SPARK_ID` 未使用声明）、`npm run build` 通过。
+- 62 方法 API 形状与拆分前逐字一致（`workspace-api-shape.test.ts` 硬契约验证通过）。
+
+#### 审核
+
+按 review-work 流程做了 5 路并行审核：目标/约束校验（oracle）、代码质量（oracle）、安全（oracle）、实机 QA（playwright 手工冒烟）、需求遗漏挖掘（context mining，git 历史 + 文档交叉验证）。审核结论：零 CRITICAL/MAJOR 问题，纯重构无行为回归。
+
+#### E2E 排障记录
+
+拆分完成后首次 E2E 全量超时失败（`.chrome` 选择器等待超时）：根因是 `playwright.config.ts` 的 `reuseExistingServer: true` 复用了 mv 前启动的旧 dev server（Vite 模块图仍引用已删除的 `workspace-store.ts` 旧路径）。杀掉 5173 端口旧进程后重跑，10/10 通过。教训：`git mv` 这类文件级重构后必须确保 dev server 冷启动，不能复用 stale 进程。
+
+### Git 记录
+
+- 本次拆分共 10 个分步 commit（每步全绿），最后 `git mv` 重命名 + import 修复 + 文档更新。
+
 ## v1.4.1 - 2026-08-19
 
 ### ContextMenu 悬浮层被编辑区遮挡

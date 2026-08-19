@@ -1,4 +1,4 @@
-# Folio 1.4.0
+# Folio 1.5.0
 
 Folio 是一个本地优先的沉浸式 Markdown 写作台。它以 CodeMirror 6 为编辑核心，通过 YAML frontmatter、稳定文稿 id、双链和 PARA 目录组织写作过程，并提供写作、预览、大纲和导图四种视图。
 
@@ -17,7 +17,15 @@ npm run build    # TypeScript 检查 + 生产构建
 npm run preview  # 预览生产构建
 ```
 
-## 1.4.0 重点
+## 1.5.0 重点
+
+- 工作区状态机切片化重构：`workspace-store.ts`（944 行）拆分为 `workspace-store/` 目录（组装层 + core/tracking/helpers/types + 7 个 slice），对外 API 逐字不变
+- 62 方法 workspace API 由 `test/store/workspace-api-shape.test.ts` 硬契约锁定（拆分前后方法名集合不多不少）
+- 全量审核（目标/质量/安全/实机 QA/需求挖掘 5 路）零 blocking 问题
+- 测试套件升级：Vitest 112 + Playwright E2E 10，oxlint 0 warning/0 error
+- 1.4.0 全部功能保留：PARA 组织、收集箱工作流、超级密码、软删除、指纹追踪、稳定双链
+
+## 1.4.1 重点
 
 - 固定 PARA 文件组织：收集箱、模板、项目、领域、资源、归档和未分类
 - 9 个文稿 type、11 个模板；`templates.ts` 仍是应用内模板源
@@ -265,7 +273,13 @@ markdown_editor/
 │   ├── components/              # 侧栏、标签、工具栏、模板与工作流弹窗
 │   ├── editor/                  # CodeMirror 扩展与交互
 │   ├── lib/
-│   │   ├── workspace-store.ts   # 工作区协调层
+│   │   ├── workspace-store/     # ★工作区状态机（切片化目录）
+│   │   │   ├── index.ts         # 组装层：ctx 构建 + 7 slice spread + useWorkspace
+│   │   │   ├── core.ts          # state 唯一所有者 + 420ms 防抖持久化
+│   │   │   ├── tracking.ts      # 会话级指纹追踪
+│   │   │   ├── helpers.ts       # 纯函数层
+│   │   │   ├── types.ts         # 类型契约（SliceContext/WorkspaceActions 等）
+│   │   │   └── slices/          # chrome/folders/manage/navigation/templates/sheets/workflow
 │   │   ├── workspace-folders.ts # 固定目录与迁移
 │   │   ├── sheet-tracking.ts    # 指纹计算
 │   │   ├── workspace-io.ts      # 快照规范化和版本
@@ -275,6 +289,22 @@ markdown_editor/
 │   └── types.ts
 └── vite.config.ts
 ```
+
+### workspace-store 状态机切片
+
+工作区状态机由 7 个独立 slice 工厂（`createXSlice(ctx)`）+ 组装层组成，通过 `SliceContext` 依赖注入解耦：
+
+| slice | 职责 | 主要方法 |
+|---|---|---|
+| `chrome` | 视图/UI/密码门/YAML/rename/caret/模式循环 | `setView` `setChromeMode` `cycleChromeMode` `toggleSidebar` `toggleFocus` `cycleTheme` `setQuery` `openYamlEditor` `closeYamlEditor` `setCaret` `openAtLine` `requestRename` `clearRename` `setSuperPassword` `submitPassword` `closePasswordGate` |
+| `folders` | 目录创建/重命名/删除 | `createFolder` `requestCreateFolder` `renameFolder` `deleteFolder` `requestDeleteFolder` |
+| `manage` | 管理模式扁平列表/展开折叠/确认 | `moveManage` `currentManageItem` `toggleManageExpand` `collapseManage` `expandManage` `confirmManage` |
+| `navigation` | 选择文稿/文件夹/关闭标签/双链打开 | `selectFolder` `selectSheet` `openSheetByTitle` `openWiki` `closeTab` |
+| `templates` | 快速新建/模板两级选择/创建文稿 | `requestNewSheet` `requestQuickSheet` `selectTemplateType` `clearTemplateType` `closeTemplatePicker` `createSheetFromTemplate` `createSheet` |
+| `sheets` | 文稿操作：重命名/移动/分类/软删除/星标/内容更新 | `renameSheet` `requestRenameSheet` `applyFrontmatter` `updateSheetContent` `toggleStar` `moveSheet` `requestMoveSheet` `classifySheet` `deleteSheet` `requestDeleteSheet` |
+| `workflow` | 结束写作/启动归类/继续编辑 + 持久化 | `prepareFinishWriting` `finishWriting` `closeFinishWriting` `classifyPending` `openContinued` `closeStartup` `hydrate` `exportBackup` `persistImmediately` `importBackup` |
+
+对外 `workspace` 对象共 62 个方法（`subscribe`/`get` + 60 个动作），由 `test/store/workspace-api-shape.test.ts` 硬契约锁定，重构时方法名集合不得增删。
 
 ## 技术栈
 
@@ -294,12 +324,13 @@ markdown_editor/
 - `Ctrl+N` 在多数浏览器中属于保留快捷键，请使用 `Alt+N` 或侧栏 `+`。
 - 实体 Markdown 目录与虚拟 workspace 文件夹的双向同步尚未实现。
 - 永久删除、插件系统、主题扩展和 AI 文稿迁移工具仍在规划阶段。
-- `workspace-store.ts` 仍偏大；进一步拆分应在补齐自动化状态机测试后进行。
+- 超级密码以明文保存在本地 `data/config.json`，是本地操作确认机制，不是账户认证或远程安全边界。
 
 ## 版本
 
-当前版本：**1.4.1**。
+当前版本：**1.5.0**。
 
+- `v1.5.0`：workspace-store 状态机切片化重构（944 行 → 目录 + 7 slice），62 方法 API 硬契约锁定，5 路全量审核
 - `v1.4.1`：ContextMenu 悬浮层修复 + 自动化测试套件（109 Vitest + 10 E2E）
 - `v1.4.0`：PARA 文件组织、收集箱工作流、超级密码、软删除、指纹追踪、模板目录和稳定双链
 - `v1.3.1`：CodeMirror block / 跨行 decoration 空白页修复
