@@ -51,6 +51,10 @@ src/lib/workspace-store/
 - 拆分完成后全量复验：tsc exit 0、vitest 112/112、E2E 10/10、oxlint 0 warning/0 error（顺带清理 v1.4.1 遗留的 `SEED_SPARK_ID` 未使用声明）、`npm run build` 通过。
 - 62 方法 API 形状与拆分前逐字一致（`workspace-api-shape.test.ts` 硬契约验证通过）。
 
+#### API 参考文档
+
+新增 `docs/api.md`：workspace 对象 62 方法完整签名（按 7 个 slice 分组 + store 契约）、`WorkspaceState`/`WorkspaceSnapshot` 及关键子类型、内部契约（SliceContext/Core/Tracking）、持久化行为。方法数量经脚本核对为 62 且无重复，与 `workspace-api-shape.test.ts` 硬契约一致；README 的 workspace-store 切片章节已链接该文档。
+
 #### 审核
 
 按 review-work 流程做了 5 路并行审核：目标/约束校验（oracle）、代码质量（oracle）、安全（oracle）、实机 QA（playwright 手工冒烟）、需求遗漏挖掘（context mining，git 历史 + 文档交叉验证）。审核结论：零 CRITICAL/MAJOR 问题，纯重构无行为回归。
