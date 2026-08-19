@@ -8,7 +8,6 @@ import seed from './seed'
 const API = 'http://127.0.0.1:5173/api/workspace'
 // fixture seed 中真实存在的 id
 const SEED_DAILY_ID = '20260819-daily-7lk6'
-const SEED_SPARK_ID = '1bc50446-94b0-4d81-9dc9-1e096ae148b2'
 
 // 整套测试共享一个纯净 seed：beforeAll 写入，beforeEach 完整还原。
 // 不能只清 tracking——测试会新建/移动文稿，跨用例累积会污染后续断言。
