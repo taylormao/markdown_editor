@@ -31,3 +31,6 @@ dist-ssr
 .playwright-mcp/
 project_all_files.txt
 tree_output.txt
+
+# Playwright test artifacts
+test-results/

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { Folder } from '../types'
 
 export type ContextTarget =
@@ -53,7 +54,7 @@ export function ContextMenu({
   const left = Math.min(x, window.innerWidth - 200)
   const top = Math.min(y, window.innerHeight - 240)
 
-  return (
+  return createPortal(
     <div className="ctx-menu" ref={ref} style={{ left, top }} role="menu">
       {target.kind === 'folder' ? (
         <>
@@ -81,6 +82,7 @@ export function ContextMenu({
       <button className="is-danger" onClick={onDelete}>
         删除
       </button>
-    </div>
+    </div>,
+    document.body,
   )
 }

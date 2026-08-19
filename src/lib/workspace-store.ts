@@ -200,7 +200,7 @@ function markTouched(id: string) {
     setState({
       tracking: {
         ...state.tracking,
-        [id]: { baselineFingerprint: fingerprint, touched: true, pendingClassification: tracking?.pendingClassification ?? false },
+        [id]: { baselineFingerprint: fingerprint, touched: true, pendingClassification: tracking?.pendingClassification ?? true },
       },
     }, true)
   })
@@ -451,8 +451,9 @@ export const workspace = {
       starred: false,
     }
     const issues = validateDoc(attrs, splitFrontmatter(content).body)
-    const quickPending = state.templatePickerMode === 'quick' && def.type !== 'spark'
-    if (quickPending) createdThisSession.add(sheet.id)
+    const inboxId = systemFolder(state.folders, 'inbox')?.id
+    const pending = (state.templatePickerMode === 'quick' || folderId === inboxId) && def.type !== 'spark'
+    if (pending) createdThisSession.add(sheet.id)
     setState(
       {
         sheets: [sheet, ...state.sheets],
@@ -464,7 +465,7 @@ export const workspace = {
         chromeMode: 'edit',
         templatePickerFor: null,
         templatePickerType: null,
-        tracking: quickPending
+        tracking: pending
           ? { ...state.tracking, [sheet.id]: { touched: false, pendingClassification: true } }
           : state.tracking,
         yamlIssues: issues,
@@ -531,12 +532,20 @@ export const workspace = {
   },
   moveSheet(id: string, folderId: string) {
     const inboxId = systemFolder(state.folders, 'inbox')?.id
-    if (folderId !== inboxId) sessionBaselines.delete(id)
+    if (folderId !== inboxId) {
+      sessionBaselines.delete(id)
+      touchedThisSession.delete(id)
+      createdThisSession.delete(id)
+    }
     setState(
       {
         sheets: state.sheets.map((sheet) => (sheet.id === id ? { ...sheet, folderId, updatedAt: Date.now() } : sheet)),
         activeFolderId: folderId,
-        tracking: folderId === inboxId ? state.tracking : clearTracking(id),
+        // 庇清：移回收集箱恢复待分类；移出收集箱标记已分类（均保留记录，不保留旧基线）
+        tracking: {
+          ...state.tracking,
+          [id]: { touched: false, pendingClassification: folderId === inboxId },
+        },
       },
       true,
     )
@@ -555,7 +564,11 @@ export const workspace = {
     createdThisSession.delete(id)
     setState({
       sheets: state.sheets.map((item) => item.id === id ? { ...item, folderId: destination.id, updatedAt: Date.now() } : item),
-      tracking: clearTracking(id),
+      // 庇清：已分类文件保留记录，pendingClassification 置 false（不再待分类）
+      tracking: {
+        ...state.tracking,
+        [id]: { touched: false, pendingClassification: false },
+      },
       activeFolderId: state.activeSheetId === id ? destination.id : state.activeFolderId,
     }, true)
   },
@@ -615,13 +628,13 @@ export const workspace = {
     for (const id of candidates) {
       const sheet = state.sheets.find((item) => item.id === id)
       if (!sheet || !isTrackedSheet(sheet)) continue
-      const record = tracking[id] ?? { touched: true, pendingClassification: false }
+      const record = tracking[id] ?? { touched: true, pendingClassification: true }
       const baseline = record.baselineFingerprint ?? await sessionBaselines.get(id)
       if (!baseline) continue
       const current = await fingerprintSheet(sheet)
       if (current === baseline) {
         if (record.pendingClassification) tracking[id] = { touched: false, pendingClassification: true }
-        else delete tracking[id]
+        else tracking[id] = { touched: false, pendingClassification: false }
         sessionBaselines.delete(id)
         touchedThisSession.delete(id)
       } else {

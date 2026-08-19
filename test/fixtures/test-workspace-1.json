@@ -1,0 +1,56 @@
+{
+  "sheets": [
+    {
+      "id": "test-1",
+      "folderId": "inbox",
+      "title": "测试文稿",
+      "content": "这是一个测试文稿，用于验证庇清机制和指纹追踪。\n\n## 测试内容\n- 待归类状态",
+      "type": "daily",
+      "createdAt": 1725380000000,
+      "updatedAt": 1725380000000,
+      "status": "normal"
+    },
+    {
+      "id": "test-2",
+      "folderId": "100-项目",
+      "title": "已归类文稿",
+      "content": "这是一个已归类到项目目录的文稿，验证分类后记录保留。",
+      "type": "project",
+      "createdAt": 1725380000000,
+      "updatedAt": 1725380000000,
+      "status": "normal"
+    }
+  ],
+  "tracking": {
+    "test-1": {
+      "baselineFingerprint": "abc123def456",
+      "touched": false,
+      "pendingClassification": true
+    },
+    "test-2": {
+      "baselineFingerprint": "ghi789jkl012",
+      "touched": false,
+      "pendingClassification": false
+    }
+  },
+  "folders": [
+    {
+      "id": "inbox",
+      "systemKey": "inbox",
+      "name": "收集箱",
+      "docType": null
+    },
+    {
+      "id": "100-项目",
+      "systemKey": "project",
+      "name": "项目",
+      "docType": "project"
+    }
+  ],
+  "activeSheetId": "test-1",
+  "activeFolderId": "inbox",
+  "openTabIds": ["test-1"],
+  "theme": "system",
+  "disabledSystemFolderKeys": [],
+  "version": "1.4.0"
+}

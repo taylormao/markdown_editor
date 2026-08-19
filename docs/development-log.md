@@ -1,5 +1,37 @@
 # Folio 开发日志
 
+## v1.4.1 - 2026-08-19
+
+### ContextMenu 悬浮层被编辑区遮挡
+
+侧栏右键菜单使用 `position: fixed` 定位，但父级 `.glass-rail` 的 `backdrop-filter` 会创建包含块与层叠上下文，导致菜单被限制在侧栏内部；flyout 延伸进编辑区时会被 CodeMirror 的 `cm-scroller` 拦截点击。
+
+修复方式：将菜单通过 `createPortal(document.body)` 挂载到 `body`，脱离 `.glass-rail` 的包含块。
+
+### 自动化测试套件
+
+按 1.4.0 基线（PARA 组织、收集箱工作流、超级密码、软删除、指纹追踪、稳定双链）补齐三层测试：
+
+- **单元测试**（Vitest + jsdom）：`test/unit/` 7 个文件覆盖 frontmatter、document-tree、wiki-scan、workspace-io、sheet-tracking、templates、workspace-folders，共 8 个文件 109 用例。
+- **Store 集成测试**：`test/store/workspace-store.test.ts`（30 用例）覆盖状态机关键路径。
+- **E2E 测试**（Playwright + 真实 Chromium）：`test/e2e/folio.spec.ts` 10 用例覆盖启动渲染、快速新建、目录内新建、结束写作归类、手动移动密码、软删除、四视图切换、侧栏搜索、启动待归类清单。
+
+测试自包含：`test/e2e/seed.ts` 提供确定性工作区 fixture，`beforeAll` 写入服务端、`beforeEach` 完整还原，不依赖 `data/workspace.json` 当前内容（该文件会被手动使用或 `createSeed()` 随机 id 重新生成）。
+
+一键运行：`npm run test`（单元/集成）、`npm run test:e2e`、`npm run test:all`（全部）、`node scripts/test-suite.ts`（依赖检查 + 汇总 + 退出码）。
+
+### E2E 排障要点（已固化为测试代码）
+
+- **420ms 防抖落盘**：UI 操作后服务端快照约 420ms 后才更新，涉及新建/归类的断言用 `expect(...).toPass()` 轮询。
+- **pagehide 覆盖服务端**：`pagehide` 时 `persistImmediately` 用内存空 tracking 覆盖服务端预置数据，且 `page.route` 拦不住 unload 时的 keepalive fetch；启动弹窗用例改用 `context.newPage()` 全新页面加载规避。
+- **选择器歧义**：视图按钮用 `getByRole('button', { name, exact: true })`，避免与编辑器正文或「结束写作」文本冲突。
+- **定位新建稿**：收集箱 seed 中已有 project 模板文稿，新建稿必须用 `snap.activeSheetId` 定位，不能按 `content.includes('template: project')` 查找。
+
+### 验证结果
+
+- Vitest 109/109 通过；Playwright E2E 10/10 通过；`node scripts/test-suite.ts` 退出码 0。
+- 测试过程修复的真实 UI bug：ContextMenu portal 化（见上文）。
+
 ## v1.3.1 - 2026-08-17
 
 ### 刷新后编辑器空白
@@ -87,7 +119,7 @@ Ctrl+N 创建的非 `spark` 文稿会先进入收集箱，作者也可以从侧�
 
 #### `pendingClassification`
 
-表示文稿是否仍需由作者决定归入正式 type 目录。它是跨会话状态，直到文稿被自动归类、手动处理、删除或改为不参与归类的类型后才清除。
+表示文稿是否仍需由作者决定归入正式 type 目录。它是跨会话状态，记录会一直保留：`true` 表示待归类（默认），自动归类或手动移出收集箱后置为 `false`（已分类）；只有删除或改为不参与归类的类型后才清除。
 
 `pendingClassification` 与 `touched` 的区别：
 
@@ -159,7 +191,7 @@ currentFingerprint != baselineFingerprint
 
 - 文稿进入“结束本次写作”的归类清单；
 - 作者选择归类时，系统按 type 自动移动到对应目录，不触发超级密码；
-- 归类完成后清除 `baselineFingerprint`、`touched` 和 `pendingClassification`；
+- 归类完成后保留追踪记录，清除本轮基线并将 `pendingClassification` 置为 `false`（已分类，不再待归类）；
 - 作者选择暂留收集箱时，将 `pendingClassification` 设为 `true`，重置 `touched`，并清除本轮基线；
 - 暂留文稿在下次启动时继续出现在历史待归类清单，直到作者明确处理。
 
@@ -257,7 +289,7 @@ SHA-256 指纹原始长度为 32 字节，保存为十六进制字符串后为 6
 - **损坏快照覆盖风险**：原 `workspace.json` 无效时可能直接写入 seed。新增 `workspace.backup.json` 恢复链，读取顺序为主快照 → 自动备份 → seed，并使用临时文件重命名方式写入，降低半写文件风险。
 - **系统目录删除不持久**：系统目录删除后，启动迁移会重新创建。新增 `disabledSystemFolderKeys` 到 workspace v3，密码确认删除的系统目录在下次启动保持禁用。
 - **无效待归类记录**：已移出收集箱或已改成 `spark` 的 tracking 记录可能继续显示。启动清单现在同时校验 sheet 存在、仍位于收集箱且 type 非 `spark`。
-- **移动后的追踪残留**：手动移出收集箱时会清除基线、touched、当次新建和 pending 状态；移入收集箱时重新建立会话基线。
+- **移动后的追踪残留**：手动移出收集箱时会清除会话基线、touched 和当次新建标记，保留记录并把 `pendingClassification` 置为 `false`（已分类）；移入收集箱时置为 `true`（重新待分类）并重新建立会话基线。
 - **软删除标签状态**：删除文稿后若还有其他标签，会切换到剩余标签；若是最后标签，则保留该文稿标签并显示其已移动到 `999-未分类` 的状态，避免无标签但仍显示编辑器的矛盾状态。
 - **模态框移动端裁切**：模板选择弹窗增加视口高度限制、内部滚动、可见关闭按钮和 520px 以下两列布局。390×844 实测弹窗高约 460px，全部 9 个 type 可见。
 - **浏览器 Ctrl+N 限制**：Chrome/Edge 保留 Ctrl+N。保留该绑定供桌面壳使用，同时增加 `Alt+N` 和侧栏顶部 `+` 作为浏览器可靠入口。

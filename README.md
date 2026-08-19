@@ -298,8 +298,9 @@ markdown_editor/
 
 ## 版本
 
-当前版本：**1.4.0**。
+当前版本：**1.4.1**。
 
+- `v1.4.1`：ContextMenu 悬浮层修复 + 自动化测试套件（109 Vitest + 10 E2E）
 - `v1.4.0`：PARA 文件组织、收集箱工作流、超级密码、软删除、指纹追踪、模板目录和稳定双链
 - `v1.3.1`：CodeMirror block / 跨行 decoration 空白页修复
 - `v1.3.0`：YAML 分栏编辑、YAML 卡片和 related 自动合并
